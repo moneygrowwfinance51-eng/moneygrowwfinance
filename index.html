@@ -742,7 +742,7 @@ async function handleDocFile(e,key){
   e.target.value=''; // allow re-picking the same file later
   if(!file)return;
 
-  const items=allDocItems(empCategory());
+  const items=DOC_REQUIREMENTS[empCategory()];
   const label=(items.find(it=>it.key===key)||{}).label||key;
 
   if(file.size>MAX_FILE_MB*1024*1024){
