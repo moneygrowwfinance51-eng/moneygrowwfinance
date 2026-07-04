@@ -637,7 +637,7 @@ function resetApplyForm(){
   document.getElementById('step3').style.display='none';
   document.getElementById('step3form').style.display='';
   document.getElementById('step3success').style.display='none';
-  docChunkIndex=0;currentRowId=null;
+  docChunkIndex=0;currentRowId=null;rowIdPromise=null;
   const btn=document.getElementById('docNextBtn');
   btn.disabled=false;
   btn.innerHTML='Next <i class="ti ti-arrow-right"></i>';
@@ -724,6 +724,16 @@ function chunkArray(arr,size){
 let docChunks=[];
 let docChunkIndex=0;
 let currentRowId=null;
+let rowIdPromise=null;
+
+// Returns the row ID once it's ready, without ever blocking button clicks —
+// callers use .then() (fire-and-forget) rather than await, so navigation
+// never has to wait on the network.
+function getRowId(){
+  if(currentRowId)return Promise.resolve(currentRowId);
+  if(rowIdPromise)return rowIdPromise.then(id=>{currentRowId=id;return id});
+  return Promise.resolve(null);
+}
 
 function renderDocRequirements(){
   const cat=empCategory();
@@ -749,26 +759,26 @@ function renderDocChunk(){
   nextBtn.onclick=isLast?submitLead:docChunkNext;
 }
 
-async function docChunkNext(){
+function docChunkNext(){
   const items=docChunks[docChunkIndex]||[];
-  const btn=document.getElementById('docNextBtn');
-  btn.disabled=true;btn.innerHTML='<i class="ti ti-loader" style="animation:spin 1s linear infinite;display:inline-block"></i> Saving...';
 
-  // Safety net only — files normally already started uploading the moment
-  // they were picked. This just catches the rare case where a file was
-  // selected before currentRowId was ready yet.
-  items.forEach(it=>{
-    const f=docFiles[it.key];
-    if(f && !f.uploaded && currentRowId){
-      f.uploaded=true;
-      uploadFileToDrive(currentRowId,f);
-    }
+  // Safety net only, non-blocking — files normally already started
+  // uploading the moment they were picked. This just catches the rare
+  // case where a file was selected before the row ID came back yet.
+  getRowId().then(rowId=>{
+    if(!rowId)return;
+    items.forEach(it=>{
+      const f=docFiles[it.key];
+      if(f && !f.uploaded){
+        f.uploaded=true;
+        uploadFileToDrive(rowId,f);
+      }
+    });
   });
 
   docChunkIndex++;
   renderDocChunk();
   document.getElementById('step3').scrollIntoView({behavior:'smooth',block:'start'});
-  btn.disabled=false;
 }
 
 function renderDocStatus(key){
@@ -825,13 +835,15 @@ async function handleDocFile(e,key){
     docFiles[key]=docObj;
     renderDocStatus(key);
 
-    // Upload straight to Drive right now — don't wait for Next/Submit.
-    // This spreads the network load out as each document is picked,
-    // instead of bursting several large files at once at the end.
-    if(currentRowId){
-      docObj.uploaded=true;
-      uploadFileToDrive(currentRowId,docObj);
-    }
+    // Upload straight to Drive in the background. If the row isn't ready
+    // yet (rare — only happens if picked within a second of reaching this
+    // screen), getRowId() waits for it without blocking anything visible.
+    getRowId().then(rowId=>{
+      if(rowId){
+        docObj.uploaded=true;
+        uploadFileToDrive(rowId,docObj);
+      }
+    });
   }catch(err){
     toast('Could not read the file for '+label,'err');
     if(statusEl)statusEl.innerHTML='';
@@ -876,14 +888,11 @@ function backToStep1(){
 }
 
 // ── STEP 2 → STEP 3 ──
-async function goStep3(){
+function goStep3(){
   const amount=document.getElementById('fa').value;
   const emp=document.getElementById('fem').value;
   if(!amount){toast('Please select the loan amount required','err');return}
   if(!emp){toast('Please select your employment type','err');return}
-
-  const nextBtn=document.getElementById('toStep3Btn');
-  if(nextBtn){nextBtn.disabled=true;nextBtn.innerHTML='<i class="ti ti-loader" style="animation:spin 1s linear infinite;display:inline-block"></i> Saving...';}
 
   // Save progress so far — so nothing is lost even if the user never reaches Submit
   const leads=getLeads();
@@ -903,10 +912,10 @@ async function goStep3(){
   if(idx>-1){leads[idx]=lead}else{leads.unshift(lead)}
   saveLeads(leads);
 
-  // Need the row number now, so each document screen can upload as it goes
-  currentRowId=await createLeadAndGetRowId(lead);
-
-  if(nextBtn){nextBtn.disabled=false;nextBtn.innerHTML='Next <i class="ti ti-arrow-right"></i>';}
+  // Kick off row creation in the background — do NOT wait for it.
+  // Document uploads (getRowId()) will pick it up whenever it resolves.
+  currentRowId=null;
+  rowIdPromise=createLeadAndGetRowId(lead);
 
   document.getElementById('sb3').style.background='var(--g)';
   document.getElementById('step2').style.display='none';
@@ -923,17 +932,14 @@ function backToStep2(){
 }
 
 // ── SUBMIT (final chunk button) ──
-async function submitLead(){
+function submitLead(){
   const name=document.getElementById('fn').value.trim();
   const phone=document.getElementById('fp').value.trim();
   const amount=document.getElementById('fa').value;
   const emp=document.getElementById('fem').value;
   if(filesConverting>0){toast('Please wait — still processing your document(s)...','err');return}
 
-  const btn=document.getElementById('docNextBtn');
   const hasFiles=Object.keys(docFiles).length>0;
-  btn.disabled=true;
-  btn.innerHTML='<i class="ti ti-loader" style="animation:spin 1s linear infinite;display:inline-block"></i> Saving...';
 
   const leads=getLeads();
   const lead={
@@ -951,21 +957,22 @@ async function submitLead(){
   if(idx>-1){leads[idx]=lead}else{leads.unshift(lead)}
   saveLeads(leads);
 
-  // Safety net only — the final screen's files normally already started
-  // uploading the moment they were picked (see handleDocFile).
+  // Everything below happens in the background — none of it blocks the
+  // success screen from showing immediately.
   const lastItems=docChunks[docChunkIndex]||[];
-  if(currentRowId){
+  getRowId().then(rowId=>{
+    if(!rowId)return;
     lastItems.forEach(it=>{
       const f=docFiles[it.key];
       if(f && !f.uploaded){
         f.uploaded=true;
-        uploadFileToDrive(currentRowId,f);
+        uploadFileToDrive(rowId,f);
       }
     });
-  }
+  });
 
-  // Finalize: mark this same row as complete (status New)
-  const rowId=await createLeadAndGetRowId(lead);
+  // Finalize: mark this same row as complete (status New) — fire-and-forget
+  createLeadAndGetRowId(lead);
 
   // Fire conversion events
   fireEvent('Lead',{loan_type:aLT});
@@ -981,7 +988,7 @@ async function submitLead(){
     }).catch(()=>{});
   }
 
-  // Show success state immediately — no waiting on file uploads
+  // Show success state immediately — no waiting on anything network-related
   const waURL=buildWAMessage(lead);
   document.getElementById('waContinueBtn').href=waURL;
   document.getElementById('step3successMsg').textContent=hasFiles
