@@ -754,10 +754,14 @@ async function docChunkNext(){
   const btn=document.getElementById('docNextBtn');
   btn.disabled=true;btn.innerHTML='<i class="ti ti-loader" style="animation:spin 1s linear infinite;display:inline-block"></i> Saving...';
 
-  // Upload whichever files were filled in this screen, right now
+  // Safety net only — files normally already started uploading the moment
+  // they were picked. This just catches the rare case where a file was
+  // selected before currentRowId was ready yet.
   items.forEach(it=>{
-    if(docFiles[it.key] && currentRowId){
-      uploadFileToDrive(currentRowId,docFiles[it.key]);
+    const f=docFiles[it.key];
+    if(f && !f.uploaded && currentRowId){
+      f.uploaded=true;
+      uploadFileToDrive(currentRowId,f);
     }
   });
 
@@ -817,8 +821,17 @@ async function handleDocFile(e,key){
 
   try{
     const base64=await fileToBase64(file);
-    docFiles[key]={label,name:file.name,type:file.type,size:file.size,data:base64};
+    const docObj={label,name:file.name,type:file.type,size:file.size,data:base64,uploaded:false};
+    docFiles[key]=docObj;
     renderDocStatus(key);
+
+    // Upload straight to Drive right now — don't wait for Next/Submit.
+    // This spreads the network load out as each document is picked,
+    // instead of bursting several large files at once at the end.
+    if(currentRowId){
+      docObj.uploaded=true;
+      uploadFileToDrive(currentRowId,docObj);
+    }
   }catch(err){
     toast('Could not read the file for '+label,'err');
     if(statusEl)statusEl.innerHTML='';
@@ -938,12 +951,16 @@ async function submitLead(){
   if(idx>-1){leads[idx]=lead}else{leads.unshift(lead)}
   saveLeads(leads);
 
-  // Upload this final screen's files right now (earlier screens already
-  // uploaded their files as soon as their own "Next" was clicked)
+  // Safety net only — the final screen's files normally already started
+  // uploading the moment they were picked (see handleDocFile).
   const lastItems=docChunks[docChunkIndex]||[];
   if(currentRowId){
     lastItems.forEach(it=>{
-      if(docFiles[it.key])uploadFileToDrive(currentRowId,docFiles[it.key]);
+      const f=docFiles[it.key];
+      if(f && !f.uploaded){
+        f.uploaded=true;
+        uploadFileToDrive(currentRowId,f);
+      }
     });
   }
 
