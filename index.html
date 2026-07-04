@@ -193,6 +193,7 @@ footer{background:#0a2d1c;color:#fff;padding:2.5rem 2rem}
   .send-otp-btn,.verified-badge{height:auto;width:100%;justify-content:center}
   #toast{left:16px;right:16px;bottom:16px;max-width:none}
 }
+@keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
 </style>
 </head>
 <body>
@@ -404,8 +405,8 @@ footer{background:#0a2d1c;color:#fff;padding:2.5rem 2rem}
       <p style="font-size:12px;color:var(--mu);text-align:center;margin:10px 0">You'll be connected to <strong>MoneyGroww's official WhatsApp support</strong> (+91 70731 77874) to continue securely — you can also send documents there if you skip this step.</p>
       <div style="display:flex;gap:10px">
         <button class="abtn" type="button" style="background:#fff;color:var(--tx);border:1.5px solid var(--bdr);flex:0 0 auto;width:auto;padding:0 18px" onclick="backToStep2()"><i class="ti ti-arrow-left"></i></button>
-        <button class="abtn" type="button" id="abtn" onclick="submitLead()" style="flex:1">
-          <i class="ti ti-brand-whatsapp"></i> Proceed to Secure WhatsApp Upload
+        <button class="abtn" type="button" id="docNextBtn" style="flex:1">
+          Next <i class="ti ti-arrow-right"></i>
         </button>
       </div>
       <p style="font-size:12px;color:#9ca3af;text-align:center;margin-top:10px;display:flex;align-items:center;justify-content:center;gap:5px">
@@ -636,9 +637,10 @@ function resetApplyForm(){
   document.getElementById('step3').style.display='none';
   document.getElementById('step3form').style.display='';
   document.getElementById('step3success').style.display='none';
-  const btn=document.getElementById('abtn');
+  docChunkIndex=0;currentRowId=null;
+  const btn=document.getElementById('docNextBtn');
   btn.disabled=false;
-  btn.innerHTML='<i class="ti ti-brand-whatsapp"></i> Proceed to Secure WhatsApp Upload';
+  btn.innerHTML='Next <i class="ti ti-arrow-right"></i>';
   document.getElementById('step1').style.display='';
 }
 
@@ -713,13 +715,56 @@ function docRow(it){
     </div>`;
 }
 
+function chunkArray(arr,size){
+  const out=[];
+  for(let i=0;i<arr.length;i+=size)out.push(arr.slice(i,i+size));
+  return out;
+}
+
+let docChunks=[];
+let docChunkIndex=0;
+let currentRowId=null;
+
 function renderDocRequirements(){
   const cat=empCategory();
   document.getElementById('docLoanType').textContent=aLT;
-  const items=DOC_REQUIREMENTS[cat];
+  docChunks=chunkArray(DOC_REQUIREMENTS[cat],3);
+  docChunkIndex=0;
+  renderDocChunk();
+}
+
+function renderDocChunk(){
+  const items=docChunks[docChunkIndex]||[];
+  const isLast=docChunkIndex===docChunks.length-1;
   const container=document.getElementById('docUploadList');
-  container.innerHTML=items.map(docRow).join('');
+  container.innerHTML=
+    `<p style="font-size:11.5px;font-weight:700;color:var(--mu);text-transform:uppercase;letter-spacing:.5px;margin-bottom:2px">Step ${docChunkIndex+1} of ${docChunks.length}</p>`
+    + items.map(docRow).join('');
   items.forEach(it=>renderDocStatus(it.key));
+
+  const nextBtn=document.getElementById('docNextBtn');
+  nextBtn.innerHTML=isLast
+    ? '<i class="ti ti-brand-whatsapp"></i> Submit Application'
+    : 'Next <i class="ti ti-arrow-right"></i>';
+  nextBtn.onclick=isLast?submitLead:docChunkNext;
+}
+
+async function docChunkNext(){
+  const items=docChunks[docChunkIndex]||[];
+  const btn=document.getElementById('docNextBtn');
+  btn.disabled=true;btn.innerHTML='<i class="ti ti-loader" style="animation:spin 1s linear infinite;display:inline-block"></i> Saving...';
+
+  // Upload whichever files were filled in this screen, right now
+  items.forEach(it=>{
+    if(docFiles[it.key] && currentRowId){
+      uploadFileToDrive(currentRowId,docFiles[it.key]);
+    }
+  });
+
+  docChunkIndex++;
+  renderDocChunk();
+  document.getElementById('step3').scrollIntoView({behavior:'smooth',block:'start'});
+  btn.disabled=false;
 }
 
 function renderDocStatus(key){
@@ -747,6 +792,8 @@ function fileToBase64(file){
   });
 }
 
+let filesConverting=0;
+
 async function handleDocFile(e,key){
   const file=e.target.files[0];
   e.target.value=''; // allow re-picking the same file later
@@ -759,12 +806,24 @@ async function handleDocFile(e,key){
     toast(label+' file is over '+MAX_FILE_MB+'MB — please choose a smaller file','err');
     return;
   }
+
+  // Show a clear loading state immediately — this is what was missing
+  const statusEl=document.getElementById('docrow-status-'+key);
+  if(statusEl){
+    statusEl.classList.remove('filled');
+    statusEl.innerHTML='<span><i class="ti ti-loader" style="animation:spin 1s linear infinite;display:inline-block"></i> Processing '+file.name+'...</span>';
+  }
+  filesConverting++;
+
   try{
     const base64=await fileToBase64(file);
     docFiles[key]={label,name:file.name,type:file.type,size:file.size,data:base64};
     renderDocStatus(key);
   }catch(err){
     toast('Could not read the file for '+label,'err');
+    if(statusEl)statusEl.innerHTML='';
+  }finally{
+    filesConverting--;
   }
 }
 
@@ -804,11 +863,37 @@ function backToStep1(){
 }
 
 // ── STEP 2 → STEP 3 ──
-function goStep3(){
+async function goStep3(){
   const amount=document.getElementById('fa').value;
   const emp=document.getElementById('fem').value;
   if(!amount){toast('Please select the loan amount required','err');return}
   if(!emp){toast('Please select your employment type','err');return}
+
+  const nextBtn=document.getElementById('toStep3Btn');
+  if(nextBtn){nextBtn.disabled=true;nextBtn.innerHTML='<i class="ti ti-loader" style="animation:spin 1s linear infinite;display:inline-block"></i> Saving...';}
+
+  // Save progress so far — so nothing is lost even if the user never reaches Submit
+  const leads=getLeads();
+  const lead={
+    id:currentLeadId,
+    name:document.getElementById('fn').value.trim(),
+    phone:document.getElementById('fp').value.trim(),
+    city:document.getElementById('fc').value.trim(),
+    loanType:aLT,amount,emp,
+    income:document.getElementById('fi').value,
+    existingLoan:document.getElementById('fexist').value,
+    date:new Date().toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'}),
+    dateRaw:new Date().toISOString(),
+    status:'Partial'
+  };
+  const idx=leads.findIndex(l=>l.id===currentLeadId);
+  if(idx>-1){leads[idx]=lead}else{leads.unshift(lead)}
+  saveLeads(leads);
+
+  // Need the row number now, so each document screen can upload as it goes
+  currentRowId=await createLeadAndGetRowId(lead);
+
+  if(nextBtn){nextBtn.disabled=false;nextBtn.innerHTML='Next <i class="ti ti-arrow-right"></i>';}
 
   document.getElementById('sb3').style.background='var(--g)';
   document.getElementById('step2').style.display='none';
@@ -824,19 +909,18 @@ function backToStep2(){
   document.getElementById('step2').scrollIntoView({behavior:'smooth',block:'start'});
 }
 
-// ── SUBMIT (STEP 3) ──
+// ── SUBMIT (final chunk button) ──
 async function submitLead(){
   const name=document.getElementById('fn').value.trim();
   const phone=document.getElementById('fp').value.trim();
   const amount=document.getElementById('fa').value;
   const emp=document.getElementById('fem').value;
-  if(!amount){toast('Please select the loan amount required','err');return}
-  if(!emp){toast('Please select your employment type','err');return}
+  if(filesConverting>0){toast('Please wait — still processing your document(s)...','err');return}
 
-  const btn=document.getElementById('abtn');
+  const btn=document.getElementById('docNextBtn');
   const hasFiles=Object.keys(docFiles).length>0;
   btn.disabled=true;
-  btn.innerHTML='<i class="ti ti-loader"></i> Saving...';
+  btn.innerHTML='<i class="ti ti-loader" style="animation:spin 1s linear infinite;display:inline-block"></i> Saving...';
 
   const leads=getLeads();
   const lead={
@@ -854,14 +938,17 @@ async function submitLead(){
   if(idx>-1){leads[idx]=lead}else{leads.unshift(lead)}
   saveLeads(leads);
 
-  // Step 1: save text fields fast, get the sheet row number back
-  const rowId=await createLeadAndGetRowId(lead);
-
-  // Step 2: fire each file upload in parallel, in the background —
-  // the visitor is NOT made to wait for these, so there's zero friction
-  if(hasFiles && rowId){
-    Object.values(docFiles).forEach(f=>uploadFileToDrive(rowId,f));
+  // Upload this final screen's files right now (earlier screens already
+  // uploaded their files as soon as their own "Next" was clicked)
+  const lastItems=docChunks[docChunkIndex]||[];
+  if(currentRowId){
+    lastItems.forEach(it=>{
+      if(docFiles[it.key])uploadFileToDrive(currentRowId,docFiles[it.key]);
+    });
   }
+
+  // Finalize: mark this same row as complete (status New)
+  const rowId=await createLeadAndGetRowId(lead);
 
   // Fire conversion events
   fireEvent('Lead',{loan_type:aLT});
