@@ -14,7 +14,6 @@
 :root{--g:#1a7f4e;--gd:#0f5c37;--gl:#e8f7ef;--gold:#b8860b;--teal:#0e7490;--purple:#6d28d9;--red:#b91c1c;--bg:#f7f8fa;--sur:#fff;--bdr:#e3e6ec;--tx:#111827;--mu:#6b7280;--r:9px}
 body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--tx);font-size:15px;line-height:1.6}
 a{text-decoration:none;color:inherit}
-/* NAV */
 nav{background:#fff;border-bottom:1px solid var(--bdr);padding:0 2rem;display:flex;align-items:center;justify-content:space-between;height:64px;position:sticky;top:0;z-index:100}
 .nbrand{display:flex;align-items:center;gap:11px}
 .nicon{width:38px;height:38px;background:var(--g);border-radius:9px;display:flex;align-items:center;justify-content:center}
@@ -26,9 +25,7 @@ nav{background:#fff;border-bottom:1px solid var(--bdr);padding:0 2rem;display:fl
 .nlinks a:hover{background:var(--bg);color:var(--tx)}
 .nbtn{background:var(--g);color:#fff;padding:9px 20px;border-radius:var(--r);font-size:14px;font-weight:600;margin-left:8px;border:none;cursor:pointer;font-family:inherit;display:inline-flex;align-items:center;gap:6px}
 .nburger{display:none;background:none;border:none;font-size:24px;color:var(--tx);cursor:pointer;padding:6px}
-/* HERO */
 .hero{background:var(--g);padding:5rem 2rem 4rem;text-align:center;color:#fff;position:relative;overflow:hidden}
-.hero::before{content:'';position:absolute;inset:0;background:url("data:image/svg+xml,%3Csvg width='60' height='60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%23ffffff' fill-opacity='0.04'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/svg%3E")}
 .hero-in{max-width:700px;margin:0 auto;position:relative}
 .eye{display:inline-flex;align-items:center;gap:6px;background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.3);border-radius:20px;padding:5px 14px;font-size:12px;font-weight:600;letter-spacing:.5px;margin-bottom:1.5rem;text-transform:uppercase}
 .hero h1{font-size:2.6rem;font-weight:800;margin-bottom:1rem;line-height:1.15;letter-spacing:-.5px}
@@ -40,18 +37,15 @@ nav{background:#fff;border-bottom:1px solid var(--bdr);padding:0 2rem;display:fl
 .hcta{display:flex;justify-content:center;gap:12px;flex-wrap:wrap}
 .btnw{background:#fff;color:var(--g);font-size:15px;padding:13px 30px;font-weight:700;border-radius:var(--r);border:none;cursor:pointer;font-family:inherit;display:inline-flex;align-items:center;gap:7px}
 .btng2{background:rgba(255,255,255,.12);color:#fff;border:1.5px solid rgba(255,255,255,.4);font-size:15px;padding:13px 28px;font-weight:600;border-radius:var(--r);display:inline-flex;align-items:center;gap:7px;font-family:inherit}
-/* TRUST BAR */
 .tbar{background:var(--gd);padding:10px 0;overflow:hidden;white-space:nowrap}
 .tbitems{display:inline-flex;gap:2.5rem;animation:sc 22s linear infinite}
 .tbit{display:inline-flex;align-items:center;gap:7px;color:rgba(255,255,255,.8);font-size:13px;font-weight:500}
 .tbit i{color:#6ee7b7;font-size:16px}
 @keyframes sc{from{transform:translateX(0)}to{transform:translateX(-50%)}}
-/* SECTION */
 .sec{padding:4rem 2rem;max-width:1100px;margin:0 auto}
 .sec-eye{font-size:11px;font-weight:700;color:var(--g);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px}
 .sec-t{font-size:2rem;font-weight:700;margin-bottom:10px;letter-spacing:-.3px}
 .sec-s{color:var(--mu);font-size:15px;margin-bottom:2.5rem;max-width:520px}
-/* LOAN CARDS */
 .lgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:20px}
 .lcard{background:#fff;border:1.5px solid var(--bdr);border-radius:14px;padding:1.75rem;cursor:pointer;transition:.2s;position:relative;overflow:hidden}
 .lcard::after{content:'';position:absolute;bottom:0;left:0;right:0;height:3px;background:var(--g);transform:scaleX(0);transition:.2s;transform-origin:left}
@@ -62,7 +56,6 @@ nav{background:#fff;border-bottom:1px solid var(--bdr);padding:0 2rem;display:fl
 .lrate{font-size:1.5rem;font-weight:800;line-height:1}
 .lratel{font-size:11px;color:#9ca3af;margin-top:3px}
 .lchip{display:inline-block;background:var(--gl);color:var(--g);font-size:11px;font-weight:600;padding:3px 9px;border-radius:20px;margin-top:8px}
-/* PROCESS */
 .psec{background:var(--gl);padding:4rem 2rem}
 .pinn{max-width:900px;margin:0 auto}
 .steps{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr))}
@@ -70,7 +63,6 @@ nav{background:#fff;border-bottom:1px solid var(--bdr);padding:0 2rem;display:fl
 .stepn{width:44px;height:44px;background:var(--g);color:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:800;margin:0 auto 1rem}
 .step h4{font-size:14px;font-weight:700;margin-bottom:6px}
 .step p{font-size:13px;color:var(--mu)}
-/* APPLY FORM */
 .asec{background:#fff;border-top:1px solid var(--bdr);border-bottom:1px solid var(--bdr);padding:4rem 2rem}
 .ainn{max-width:820px;margin:0 auto}
 .ltabs{display:flex;gap:8px;margin-bottom:2rem;flex-wrap:wrap}
@@ -95,70 +87,34 @@ nav{background:#fff;border-bottom:1px solid var(--bdr);padding:0 2rem;display:fl
 .docrow-status .docrow-rm{cursor:pointer;color:#b91c1c;font-weight:700;font-size:14px;line-height:1;padding:2px 4px}
 .feld input:focus,.feld select:focus,.feld textarea:focus{border-color:var(--g);box-shadow:0 0 0 3px rgba(26,127,78,.1)}
 .feld textarea{resize:vertical;min-height:80px}
-/* OTP SECTION */
-.otp-wrap{display:none;margin-top:1.25rem;background:var(--gl);border:1px solid #86efac;border-radius:var(--r);padding:1.25rem}
-.otp-wrap.show{display:block}
-.otp-title{font-size:14px;font-weight:700;margin-bottom:4px;color:var(--gd);display:flex;align-items:center;gap:7px}
-.otp-sub{font-size:12px;color:var(--mu);margin-bottom:12px}
-.otp-row{display:flex;gap:10px;align-items:center}
-.otp-inputs{display:flex;gap:8px}
-.otp-box{width:44px;height:48px;text-align:center;font-size:20px;font-weight:700;border:2px solid var(--bdr);border-radius:var(--r);outline:none;background:#fff;color:var(--tx);transition:.15s;font-family:inherit}
-.otp-box:focus{border-color:var(--g);box-shadow:0 0 0 3px rgba(26,127,78,.15)}
-.otp-box.filled{border-color:var(--g);background:var(--gl)}
-.otp-verify-btn{background:var(--g);color:#fff;border:none;border-radius:var(--r);padding:10px 18px;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit;transition:.15s;white-space:nowrap}
-.otp-verify-btn:hover{background:var(--gd)}
-.otp-timer{font-size:12px;color:var(--mu);margin-top:8px}
-.otp-resend{background:none;border:none;color:var(--g);font-size:12px;font-weight:600;cursor:pointer;padding:0;font-family:inherit}
-.otp-success{display:none;background:#dcfce7;border:1px solid #86efac;border-radius:var(--r);padding:10px 14px;font-size:13px;font-weight:600;color:#166534;margin-top:.75rem;align-items:center;gap:7px}
-.otp-success.show{display:flex}
-.phone-row{display:flex;gap:8px;align-items:flex-end}
-.phone-row .feld{flex:1}
-.send-otp-btn{background:var(--g);color:#fff;border:none;border-radius:var(--r);padding:11px 14px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;white-space:nowrap;height:46px;flex-shrink:0;transition:.15s;display:flex;align-items:center;gap:5px}
-.send-otp-btn:hover{background:var(--gd)}
-.send-otp-btn:disabled{opacity:.5;cursor:not-allowed}
-.verified-badge{display:none;align-items:center;gap:5px;background:#dcfce7;border:1px solid #86efac;border-radius:6px;padding:4px 10px;font-size:12px;font-weight:600;color:#166534;height:46px;flex-shrink:0}
-.verified-badge.show{display:flex}
-/* SUBMIT BTN */
 .abtn{width:100%;background:var(--g);color:#fff;border:none;border-radius:var(--r);padding:14px;font-size:15px;font-weight:700;cursor:pointer;margin-top:1.25rem;display:flex;align-items:center;justify-content:center;gap:9px;transition:.15s;font-family:inherit}
 .abtn:hover{background:var(--gd)}
 .abtn:disabled{opacity:.5;cursor:not-allowed}
-/* WA CONFIRMATION */
-.wa-confirm{display:none;margin-top:1rem;background:#dcfce7;border:1px solid #86efac;border-radius:var(--r);padding:1rem 1.25rem}
-.wa-confirm.show{display:block}
-.wa-confirm-title{font-size:14px;font-weight:700;color:#166534;margin-bottom:6px;display:flex;align-items:center;gap:7px}
-.wa-confirm p{font-size:13px;color:#166534;margin-bottom:10px}
-.wa-btn{display:inline-flex;align-items:center;gap:7px;background:#25D366;color:#fff;border:none;border-radius:var(--r);padding:9px 18px;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit;text-decoration:none}
-/* WHY */
 .wgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:18px}
 .wcard{background:#fff;border:1px solid var(--bdr);border-radius:14px;padding:1.5rem}
 .wic{width:44px;height:44px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:20px;margin-bottom:12px}
 .wcard h4{font-size:14px;font-weight:700;margin-bottom:6px}
 .wcard p{font-size:13px;color:var(--mu);line-height:1.5}
-/* TESTIMONIALS */
 .tgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:18px}
 .tcar{background:#fff;border:1px solid var(--bdr);border-radius:14px;padding:1.5rem}
 .tstar{color:#f59e0b;font-size:14px;margin-bottom:10px}
 .tcar p{font-size:13px;color:var(--mu);line-height:1.6;margin-bottom:14px;font-style:italic}
 .tauth{display:flex;align-items:center;gap:10px}
 .tav{width:36px;height:36px;border-radius:50%;background:var(--gl);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:var(--g)}
-/* CTA BANNER */
 .ctaban{background:var(--g);padding:4rem 2rem;text-align:center;color:#fff}
 .ctaban h2{font-size:2rem;font-weight:800;margin-bottom:10px}
 .ctaban p{opacity:.85;font-size:15px;margin-bottom:2rem}
-/* FOOTER */
 footer{background:#0a2d1c;color:#fff;padding:2.5rem 2rem}
 .finn{max-width:1100px;margin:0 auto;display:grid;grid-template-columns:2fr 1fr 1fr;gap:2rem}
 .fcol h5{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;opacity:.5;margin-bottom:12px}
 .fcol a{display:block;font-size:13px;opacity:.6;margin-bottom:8px}
 .fbott{max-width:1100px;margin:1.5rem auto 0;border-top:1px solid rgba(255,255,255,.1);padding-top:1.25rem;display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px}
 .fbott p{font-size:12px;opacity:.4}
-/* TOAST */
 #toast{position:fixed;bottom:24px;right:24px;padding:12px 18px;border-radius:var(--r);font-size:14px;font-weight:500;display:flex;align-items:center;gap:9px;z-index:9999;transform:translateY(80px);opacity:0;transition:.25s;pointer-events:none;max-width:360px}
 #toast.show{transform:translateY(0);opacity:1}
 #toast.ok{background:var(--g);color:#fff}
 #toast.err{background:var(--red);color:#fff}
 #toast.wa{background:#25D366;color:#fff}
-/* MOBILE NAV */
 @media(max-width:860px){
   .nburger{display:block}
   .nlinks{position:absolute;top:64px;left:0;right:0;background:#fff;border-bottom:1px solid var(--bdr);flex-direction:column;align-items:stretch;gap:2px;padding:10px 1rem 16px;box-shadow:0 8px 16px rgba(0,0,0,.06);max-height:0;overflow:hidden;opacity:0;pointer-events:none;transition:.2s}
@@ -186,11 +142,6 @@ footer{background:#0a2d1c;color:#fff;padding:2.5rem 2rem}
   .finn{grid-template-columns:1fr;gap:1.75rem}
   .ltabs{gap:6px}
   .ltab{flex:1 1 calc(50% - 6px);justify-content:center;padding:9px 10px}
-  .otp-row{flex-direction:column;align-items:flex-start}
-  .otp-inputs{width:100%;justify-content:space-between}
-  .otp-box{width:15%;min-width:0;height:44px;font-size:18px}
-  .phone-row{flex-direction:column;align-items:stretch}
-  .send-otp-btn,.verified-badge{height:auto;width:100%;justify-content:center}
   #toast{left:16px;right:16px;bottom:16px;max-width:none}
 }
 @keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
@@ -250,7 +201,6 @@ footer{background:#0a2d1c;color:#fff;padding:2.5rem 2rem}
   </div>
 </div>
 
-<!-- LOAN PRODUCTS -->
 <div class="sec" id="loans">
   <div class="sec-eye">Our products</div>
   <div class="sec-t">Loan solutions for every need</div>
@@ -284,7 +234,6 @@ footer{background:#0a2d1c;color:#fff;padding:2.5rem 2rem}
   <p style="font-size:12px;color:var(--mu);margin-top:1.25rem">*Rates shown are indicative starting rates from our partner banks/NBFCs and vary based on credit score, income, loan tenure &amp; lender policy at the time of application. Final rate is confirmed by the lender only.</p>
 </div>
 
-<!-- PROCESS -->
 <div class="psec" id="process">
   <div class="pinn">
     <div style="text-align:center;margin-bottom:2rem">
@@ -299,7 +248,6 @@ footer{background:#0a2d1c;color:#fff;padding:2.5rem 2rem}
   </div>
 </div>
 
-<!-- APPLY FORM -->
 <div class="asec" id="apply">
   <div class="ainn">
     <div style="margin-bottom:1.75rem">
@@ -415,16 +363,31 @@ footer{background:#0a2d1c;color:#fff;padding:2.5rem 2rem}
       <p style="text-align:center;margin-top:6px"><a href="javascript:void(0)" onclick="startOver()" style="font-size:12px;color:var(--mu);text-decoration:underline">Start over / clear form</a></p>
       </div>
 
+      <div id="step3engage" style="display:none;text-align:center;padding:1.5rem 0">
+        <div style="width:56px;height:56px;border-radius:50%;background:var(--gl);display:flex;align-items:center;justify-content:center;margin:0 auto 14px">
+          <i class="ti ti-shield-check" style="font-size:28px;color:var(--g)"></i>
+        </div>
+        <h4 style="font-size:17px;font-weight:700;margin-bottom:6px">Securing your documents…</h4>
+        <p style="font-size:13px;color:var(--mu);max-width:340px;margin:0 auto 14px;line-height:1.6">While that finishes — one quick question:</p>
+        <p style="font-size:14.5px;font-weight:700;margin-bottom:14px">What matters most to you in this loan?</p>
+        <div id="engageOpts" style="display:flex;flex-wrap:wrap;gap:8px;justify-content:center;max-width:360px;margin:0 auto 20px">
+          <button type="button" class="ltab" onclick="engageAnswered(this,'Lowest interest rate')">Lowest interest rate</button>
+          <button type="button" class="ltab" onclick="engageAnswered(this,'Fast disbursal')">Fast disbursal</button>
+          <button type="button" class="ltab" onclick="engageAnswered(this,'Flexible tenure')">Flexible tenure</button>
+          <button type="button" class="ltab" onclick="engageAnswered(this,'Not sure yet')">Not sure yet</button>
+        </div>
+        <div style="max-width:340px;margin:0 auto">
+          <div style="background:var(--bdr);border-radius:20px;height:8px;overflow:hidden">
+            <div id="engageProgressBar" style="background:var(--g);height:100%;width:8%;transition:width .4s"></div>
+          </div>
+          <p id="engageProgressText" style="font-size:11.5px;color:var(--mu);margin-top:6px">Uploading your documents securely…</p>
+        </div>
+      </div>
+
       <div id="step3success" style="display:none;text-align:center;padding:1.5rem 0">
         <div style="width:56px;height:56px;border-radius:50%;background:var(--gl);display:flex;align-items:center;justify-content:center;margin:0 auto 14px"><i class="ti ti-check" style="font-size:28px;color:var(--g)"></i></div>
         <h4 style="font-size:17px;font-weight:700;margin-bottom:6px">Details saved!</h4>
-        <p id="step3successMsg" style="font-size:13px;color:var(--mu);max-width:340px;margin:0 auto 18px;line-height:1.6">Tap below to open WhatsApp and complete your application.</p>
-        <div id="uploadProgressWrap" style="display:none;max-width:340px;margin:-8px auto 18px">
-          <div style="background:var(--bdr);border-radius:20px;height:8px;overflow:hidden">
-            <div id="uploadProgressBar" style="background:var(--g);height:100%;width:0%;transition:width .3s"></div>
-          </div>
-          <p id="uploadProgressText" style="font-size:11.5px;color:var(--mu);margin-top:6px">Uploading documents…</p>
-        </div>
+        <p id="step3successMsg" style="font-size:13px;color:var(--mu);max-width:340px;margin:0 auto 18px;line-height:1.6">Redirecting you to WhatsApp…</p>
         <a class="abtn" href="#" id="waContinueBtn" style="text-decoration:none;display:inline-flex"><i class="ti ti-brand-whatsapp"></i> Continue on WhatsApp</a>
       </div>
     </div>
@@ -433,7 +396,6 @@ footer{background:#0a2d1c;color:#fff;padding:2.5rem 2rem}
   </div>
 </div>
 
-<!-- WHY US -->
 <div class="sec" id="why">
   <div class="sec-eye">Why MoneyGroww</div>
   <div class="sec-t">India's most trusted loan consultant</div>
@@ -448,7 +410,6 @@ footer{background:#0a2d1c;color:#fff;padding:2.5rem 2rem}
   </div>
 </div>
 
-<!-- TESTIMONIALS -->
 <div style="background:var(--gl);padding:4rem 2rem">
   <div style="max-width:1100px;margin:0 auto">
     <div class="sec-eye">What clients say</div>
@@ -475,7 +436,7 @@ footer{background:#0a2d1c;color:#fff;padding:2.5rem 2rem}
         <div><div style="font-size:16px;font-weight:700">MoneyGroww</div><div style="font-size:11px;opacity:.5">Financial Consultant</div></div>
       </div>
       <p style="font-size:13px;opacity:.55;margin-top:8px;line-height:1.7;max-width:280px">MoneyGroww is a loan facilitation service. We are not a bank or NBFC — we connect borrowers with our RBI-regulated bank &amp; NBFC partners and do not sanction or disburse loans ourselves.</p>
-      <p style="font-size:12px;opacity:.4;margin-top:10px;max-width:280px"><!-- TODO: Add your registered business address, DSA registration/agreement ID, and CIN (if applicable) here for legal compliance -->Registered address: [Add address] · DSA ID: [Add registration no.]</p>
+      <p style="font-size:12px;opacity:.4;margin-top:10px;max-width:280px">Registered address: [Add address] · DSA ID: [Add registration no.]</p>
     </div>
     <div class="fcol">
       <h5>Loan Products</h5>
@@ -497,10 +458,7 @@ footer{background:#0a2d1c;color:#fff;padding:2.5rem 2rem}
 <div id="toast"></div>
 
 <script>
-// ── CONFIG (set from admin analytics page) ──
 const STORE = 'mg_leads_v1';
-
-// ── GOOGLE SHEET — PASTE YOUR APPS SCRIPT WEB APP URL BELOW ──
 const GSHEET_URL = 'https://script.google.com/macros/s/AKfycbw2wtzpfWgahjn_n-2XP8J_sMqlZD3jx5fIxHEpvR81EZhxzBkFk1lHNU3-JR3dtfflCw/exec';
 
 function sendToSheet(lead){
@@ -521,13 +479,11 @@ function uploadFileToDrive(rowId,doc){
     body:JSON.stringify({action:'uploadFile',rowId:rowId,fileName:doc.name,fileType:doc.type,fileData:doc.data,label:doc.label})
   }).catch(()=>{});
 }
-// Needs the real rowId back, so this one is NOT no-cors (Apps Script
-// allows this as long as Content-Type stays text/plain — no preflight).
 async function createLeadAndGetRowId(lead){
   if(!GSHEET_URL || GSHEET_URL.indexOf('PASTE_')===0) return null;
   try{
     const controller=new AbortController();
-    const timeoutId=setTimeout(()=>controller.abort(),15000); // never hang forever
+    const timeoutId=setTimeout(()=>controller.abort(),15000);
     const res=await fetch(GSHEET_URL,{
       method:'POST',
       headers:{'Content-Type':'text/plain'},
@@ -545,7 +501,6 @@ function getCfg(){try{return JSON.parse(localStorage.getItem(CFG_STORE)||'{}')}c
 function getLeads(){try{return JSON.parse(localStorage.getItem(STORE)||'[]')}catch{return[]}}
 function saveLeads(l){localStorage.setItem(STORE,JSON.stringify(l))}
 
-// ── Dynamic GA / Meta injection from admin settings ──
 (function(){
   const cfg = getCfg();
   if(cfg.gaId && cfg.gaId.trim()){
@@ -571,7 +526,6 @@ function fireEvent(evName, params){
   if(window._metaEnabled && window.fbq) fbq('track', evName, params||{});
 }
 
-// ── MOBILE NAV ──
 function toggleMenu(){
   const m=document.getElementById('nlinks');
   const icon=document.getElementById('nburgerIcon');
@@ -585,7 +539,6 @@ function closeMenu(){
   icon.className='ti ti-menu-2';
 }
 
-// ── TOAST ──
 function toast(msg,type='ok'){
   const t=document.getElementById('toast');
   t.innerHTML='<i class="ti ti-'+(type==='ok'?'check':type==='err'?'alert-circle':'brand-whatsapp')+'"></i>'+msg;
@@ -593,7 +546,6 @@ function toast(msg,type='ok'){
   setTimeout(()=>t.classList.remove('show'),4000);
 }
 
-// ── TAB SELECT ──
 let aLT='Personal Loan';
 function selTab(k){
   const m={'home':'Home Loan','lap':'Loan Against Property','personal':'Personal Loan','business':'Business Loan'};
@@ -620,7 +572,6 @@ function selTab(k){
   fireEvent('select_loan_type',{loan_type:aLT});
 }
 
-// ── RESET / START OVER ──
 function resetApplyForm(){
   document.getElementById('fn').value='';
   document.getElementById('fp').value='';
@@ -636,6 +587,7 @@ function resetApplyForm(){
   document.getElementById('step2').style.display='none';
   document.getElementById('step3').style.display='none';
   document.getElementById('step3form').style.display='';
+  document.getElementById('step3engage').style.display='none';
   document.getElementById('step3success').style.display='none';
   docChunkIndex=0;currentRowId=null;rowIdPromise=null;
   const btn=document.getElementById('docNextBtn');
@@ -656,7 +608,6 @@ function onPhoneInput(){
   el.value=el.value.replace(/\D/g,'').slice(0,10);
 }
 
-// ── WHATSAPP MESSAGE ──
 function buildWAMessage(lead){
   const cfg=getCfg();
   const waNum=(cfg.waNumber||'917073177874').replace(/[^0-9]/g,'');
@@ -677,8 +628,7 @@ Please confirm my application and let me know the next steps. Thank you!`;
 
 function livePreview(){}
 
-// ── DOCUMENT UPLOAD (per document slot, based on employment type) ──
-let docFiles={}; // { key: {label,name,type,size,data(base64, no prefix)} }
+let docFiles={};
 const MAX_FILE_MB=5;
 
 const DOC_REQUIREMENTS={
@@ -726,9 +676,6 @@ let docChunkIndex=0;
 let currentRowId=null;
 let rowIdPromise=null;
 
-// Returns the row ID once it's ready, without ever blocking button clicks —
-// callers use .then() (fire-and-forget) rather than await, so navigation
-// never has to wait on the network.
 function getRowId(){
   if(currentRowId)return Promise.resolve(currentRowId);
   if(rowIdPromise)return rowIdPromise.then(id=>{currentRowId=id;return id});
@@ -761,10 +708,6 @@ function renderDocChunk(){
 
 function docChunkNext(){
   const items=docChunks[docChunkIndex]||[];
-
-  // Safety net only, non-blocking — files normally already started
-  // uploading the moment they were picked. This just catches the rare
-  // case where a file was selected before the row ID came back yet.
   getRowId().then(rowId=>{
     if(!rowId)return;
     items.forEach(it=>{
@@ -775,7 +718,6 @@ function docChunkNext(){
       }
     });
   });
-
   docChunkIndex++;
   renderDocChunk();
   document.getElementById('step3').scrollIntoView({behavior:'smooth',block:'start'});
@@ -800,7 +742,7 @@ function removeDocFile(key){
 function fileToBase64(file){
   return new Promise((resolve,reject)=>{
     const r=new FileReader();
-    r.onload=()=>resolve(r.result.split(',')[1]); // strip data:...;base64, prefix
+    r.onload=()=>resolve(r.result.split(',')[1]);
     r.onerror=reject;
     r.readAsDataURL(file);
   });
@@ -810,7 +752,7 @@ let filesConverting=0;
 
 async function handleDocFile(e,key){
   const file=e.target.files[0];
-  e.target.value=''; // allow re-picking the same file later
+  e.target.value='';
   if(!file)return;
 
   const items=DOC_REQUIREMENTS[empCategory()];
@@ -821,7 +763,6 @@ async function handleDocFile(e,key){
     return;
   }
 
-  // Show a clear loading state immediately — this is what was missing
   const statusEl=document.getElementById('docrow-status-'+key);
   if(statusEl){
     statusEl.classList.remove('filled');
@@ -835,9 +776,6 @@ async function handleDocFile(e,key){
     docFiles[key]=docObj;
     renderDocStatus(key);
 
-    // Upload straight to Drive in the background. If the row isn't ready
-    // yet (rare — only happens if picked within a second of reaching this
-    // screen), getRowId() waits for it without blocking anything visible.
     getRowId().then(rowId=>{
       if(rowId){
         docObj.uploaded=true;
@@ -854,7 +792,6 @@ async function handleDocFile(e,key){
 
 let currentLeadId=null;
 
-// ── STEP 1 → STEP 2 (saves partial lead so no drop-off loss) ──
 function goStep2(){
   const name=document.getElementById('fn').value.trim();
   const phone=document.getElementById('fp').value.trim();
@@ -887,14 +824,12 @@ function backToStep1(){
   document.getElementById('step1').scrollIntoView({behavior:'smooth',block:'start'});
 }
 
-// ── STEP 2 → STEP 3 ──
 function goStep3(){
   const amount=document.getElementById('fa').value;
   const emp=document.getElementById('fem').value;
   if(!amount){toast('Please select the loan amount required','err');return}
   if(!emp){toast('Please select your employment type','err');return}
 
-  // Save progress so far — so nothing is lost even if the user never reaches Submit
   const leads=getLeads();
   const lead={
     id:currentLeadId,
@@ -912,8 +847,6 @@ function goStep3(){
   if(idx>-1){leads[idx]=lead}else{leads.unshift(lead)}
   saveLeads(leads);
 
-  // Kick off row creation in the background — do NOT wait for it.
-  // Document uploads (getRowId()) will pick it up whenever it resolves.
   currentRowId=null;
   rowIdPromise=createLeadAndGetRowId(lead);
 
@@ -931,8 +864,20 @@ function backToStep2(){
   document.getElementById('step2').scrollIntoView({behavior:'smooth',block:'start'});
 }
 
-// ── SUBMIT (final chunk button) ──
-function submitLead(){
+function engageAnswered(btn,val){
+  document.querySelectorAll('#engageOpts .ltab').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  window._engageAnswer=val;
+}
+
+function setEngageProgress(pct,text){
+  const bar=document.getElementById('engageProgressBar');
+  const txt=document.getElementById('engageProgressText');
+  if(bar)bar.style.width=Math.max(8,Math.min(100,pct))+'%';
+  if(txt && text)txt.textContent=text;
+}
+
+async function submitLead(){
   const name=document.getElementById('fn').value.trim();
   const phone=document.getElementById('fp').value.trim();
   const amount=document.getElementById('fa').value;
@@ -950,35 +895,17 @@ function submitLead(){
     existingLoan:document.getElementById('fexist').value,
     date:new Date().toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'}),
     dateRaw:new Date().toISOString(),
-    status:'New',
-    documents:Object.values(docFiles).map(f=>({name:f.name,type:f.type,data:f.data,label:f.label}))
+    status:'New'
   };
   const idx=leads.findIndex(l=>l.id===currentLeadId);
   if(idx>-1){leads[idx]=lead}else{leads.unshift(lead)}
   saveLeads(leads);
 
-  // Everything below happens in the background — none of it blocks the
-  // success screen from showing immediately.
-  const lastItems=docChunks[docChunkIndex]||[];
-  getRowId().then(rowId=>{
-    if(!rowId)return;
-    lastItems.forEach(it=>{
-      const f=docFiles[it.key];
-      if(f && !f.uploaded){
-        f.uploaded=true;
-        uploadFileToDrive(rowId,f);
-      }
-    });
-  });
+  const waURL=buildWAMessage(lead);
+  document.getElementById('waContinueBtn').href=waURL;
 
-  // Finalize: mark this same row as complete (status New) — fire-and-forget
-  createLeadAndGetRowId(lead);
-
-  // Fire conversion events
   fireEvent('Lead',{loan_type:aLT});
   fireEvent('generate_lead',{currency:'INR',loan_type:aLT});
-
-  // Fire Meta Conversion API if configured
   const cfg2=getCfg();
   if(cfg2.metaCAPIToken && cfg2.metaPixelId){
     fetch('https://graph.facebook.com/v18.0/'+cfg2.metaPixelId+'/events?access_token='+cfg2.metaCAPIToken,{
@@ -988,15 +915,53 @@ function submitLead(){
     }).catch(()=>{});
   }
 
-  // Show success state immediately — no waiting on anything network-related
-  const waURL=buildWAMessage(lead);
-  document.getElementById('waContinueBtn').href=waURL;
-  document.getElementById('step3successMsg').textContent=hasFiles
-    ? 'Your details are saved and documents are uploading in the background. Tap below to confirm with our WhatsApp team.'
-    : 'Your details are saved. Tap below to open WhatsApp and confirm with our team.';
+  createLeadAndGetRowId(lead);
+
+  const lastItems=docChunks[docChunkIndex]||[];
+
+  if(!hasFiles){
+    document.getElementById('step3successMsg').textContent='Your details are saved. Redirecting you to WhatsApp…';
+    document.getElementById('step3form').style.display='none';
+    document.getElementById('step3success').style.display='';
+    toast('Application submitted!','ok');
+    setTimeout(()=>{ window.location.href=waURL; },1200);
+    return;
+  }
+
   document.getElementById('step3form').style.display='none';
+  document.getElementById('step3engage').style.display='';
+  document.getElementById('step3engage').scrollIntoView({behavior:'smooth',block:'start'});
+  setEngageProgress(15,'Uploading your documents securely…');
+
+  const rowId=await getRowId();
+  let uploadPromises=[];
+  if(rowId){
+    lastItems.forEach(it=>{
+      const f=docFiles[it.key];
+      if(f && !f.uploaded){
+        f.uploaded=true;
+        uploadPromises.push(uploadFileToDrive(rowId,f));
+      }
+    });
+  }
+
+  setEngageProgress(55,'Almost done…');
+
+  const minWait=new Promise(res=>setTimeout(res,3000));
+  const maxWait=new Promise(res=>setTimeout(res,8000));
+  const uploadsDone=uploadPromises.length?Promise.allSettled(uploadPromises):Promise.resolve();
+
+  await Promise.race([
+    Promise.all([minWait,uploadsDone]).then(()=>setEngageProgress(100,'All set!')),
+    maxWait.then(()=>setEngageProgress(100,'All set!'))
+  ]);
+
+  document.getElementById('step3engage').style.display='none';
+  document.getElementById('step3successMsg').textContent='Your details and documents are saved. Redirecting you to WhatsApp…';
   document.getElementById('step3success').style.display='';
   toast('Application submitted!','ok');
+
+  window.location.href=waURL;
 }
 </script>
 </body>
