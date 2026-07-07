@@ -214,7 +214,7 @@ src="https://www.facebook.com/tr?id=2041090346480777&ev=PageView&noscript=1"
     <a href="#process" onclick="closeMenu()">Process</a>
     <a href="#apply" onclick="closeMenu()">Apply</a>
     <a href="#why" onclick="closeMenu()">About</a>
-    <button class="nbtn" onclick="closeMenu();document.getElementById('apply').scrollIntoView({behavior:'smooth'})"><svg class="icon"><use href="#icon-arrow-right"/></svg> Apply now</button>
+    <button class="nbtn" onclick="closeMenu();goToApply('nav_button')"><svg class="icon"><use href="#icon-arrow-right"/></svg> Apply now</button>
   </div>
 </nav>
 
@@ -230,7 +230,7 @@ src="https://www.facebook.com/tr?id=2041090346480777&ev=PageView&noscript=1"
       <div class="hstat"><strong>24 hrs</strong><span>Response time</span></div>
     </div>
     <div class="hcta">
-      <button class="btnw" onclick="document.getElementById('apply').scrollIntoView({behavior:'smooth'})"><svg class="icon"><use href="#icon-send"/></svg> Apply for free</button>
+      <button class="btnw" onclick="goToApply('hero_button')"><svg class="icon"><use href="#icon-send"/></svg> Apply for free</button>
       <a href="tel:+917073177874" class="btng2"><svg class="icon"><use href="#icon-phone"/></svg> Call us now</a>
     </div>
   </div>
@@ -479,7 +479,7 @@ src="https://www.facebook.com/tr?id=2041090346480777&ev=PageView&noscript=1"
 <div class="ctaban">
   <h2>Ready to grow your money?</h2>
   <p>Apply now — it's free, takes 2 minutes, and our expert calls you within 24 hours</p>
-  <button class="btnw" onclick="document.getElementById('apply').scrollIntoView({behavior:'smooth'})"><svg class="icon"><use href="#icon-arrow-right"/></svg> Apply for free today</button>
+  <button class="btnw" onclick="goToApply('bottom_cta')"><svg class="icon"><use href="#icon-arrow-right"/></svg> Apply for free today</button>
 </div>
 
 <footer>
@@ -587,6 +587,14 @@ function saveLeads(l){localStorage.setItem(STORE,JSON.stringify(l))}
 function fireEvent(evName, params){
   if(typeof gtag==='function') gtag('event', evName, params||{});
   if(typeof fbq==='function') fbq('track', evName, params||{});
+}
+
+// Fires a click-intent event BEFORE scrolling — this is what was missing:
+// clicking "Apply for free" never fired any pixel/analytics event before,
+// so Meta had no signal for anyone who clicked but didn't finish the form.
+function goToApply(source){
+  fireEvent('ApplyIntent',{cta_source:source});
+  document.getElementById('apply').scrollIntoView({behavior:'smooth'});
 }
 
 function toggleMenu(){
@@ -972,8 +980,14 @@ async function submitLead(){
   // real-world conversion, so Meta should count it once, not twice.
   const capiEventId='lead_'+lead.id;
 
-  if(typeof fbq==='function') fbq('track','Lead',{loan_type:aLT,currency:'INR'},{eventID:capiEventId});
-  fireEvent('generate_lead',{currency:'INR',loan_type:aLT});
+  // Meta requires a "value" on Lead/generate_lead for ROAS reporting.
+  // 1 is a safe placeholder (a lead isn't guaranteed revenue like an
+  // e-commerce sale) — if you later know your real average value per
+  // lead (e.g. average commission x conversion rate), replace this.
+  const LEAD_VALUE=1;
+
+  if(typeof fbq==='function') fbq('track','Lead',{loan_type:aLT,currency:'INR',value:LEAD_VALUE},{eventID:capiEventId});
+  fireEvent('generate_lead',{currency:'INR',loan_type:aLT,value:LEAD_VALUE});
 
   // Send the matching server-side event via Apps Script — NOT directly to
   // Meta from the browser. This keeps your CAPI access token out of the
@@ -983,7 +997,7 @@ async function submitLead(){
       method:'POST',
       mode:'no-cors',
       headers:{'Content-Type':'text/plain'},
-      body:JSON.stringify({action:'sendCAPI',eventId:capiEventId,name:name,phone:phone,loanType:aLT,secret:API_SECRET})
+      body:JSON.stringify({action:'sendCAPI',eventId:capiEventId,name:name,phone:phone,loanType:aLT,value:LEAD_VALUE,secret:API_SECRET})
     }).catch(()=>{});
   }
 
