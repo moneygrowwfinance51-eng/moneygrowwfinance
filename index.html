@@ -152,23 +152,7 @@ footer{background:#0a2d1c;color:#fff;padding:2.5rem 2rem}
   #toast{left:16px;right:16px;bottom:16px;max-width:none}
 }
 @keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
-</style><!-- Meta Pixel Code -->
-<script>
-!function(f,b,e,v,n,t,s)
-{if(f.fbq)return;n=f.fbq=function(){n.callMethod?
-n.callMethod.apply(n,arguments):n.queue.push(arguments)};
-if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
-n.queue=[];t=b.createElement(e);t.async=!0;
-t.src=v;s=b.getElementsByTagName(e)[0];
-s.parentNode.insertBefore(t,s)}(window, document,'script',
-'https://connect.facebook.net/en_US/fbevents.js');
-fbq('init', '2041090346480777');
-fbq('track', 'PageView');
-</script>
-<noscript><img height="1" width="1" style="display:none"
-src="https://www.facebook.com/tr?id=2041090346480777&ev=PageView&noscript=1"
-/></noscript>
-<!-- End Meta Pixel Code -->
+</style>
 </head>
 <body>
 <svg style="position:absolute;width:0;height:0;overflow:hidden" aria-hidden="true">
@@ -585,8 +569,8 @@ function saveLeads(l){localStorage.setItem(STORE,JSON.stringify(l))}
 })();
 
 function fireEvent(evName, params){
-  if(window._gaEnabled && window.gtag) gtag('event', evName, params||{});
-  if(window._metaEnabled && window.fbq) fbq('track', evName, params||{});
+  if(typeof gtag==='function') gtag('event', evName, params||{});
+  if(typeof fbq==='function') fbq('track', evName, params||{});
 }
 
 function toggleMenu(){
@@ -967,14 +951,23 @@ async function submitLead(){
   const waURL=buildWAMessage(lead);
   document.getElementById('waContinueBtn').href=waURL;
 
-  fireEvent('Lead',{loan_type:aLT});
+  // Shared event ID lets Meta de-duplicate the browser Pixel event and the
+  // server-side Conversions API event below — both describe the same
+  // real-world conversion, so Meta should count it once, not twice.
+  const capiEventId='lead_'+lead.id;
+
+  if(typeof fbq==='function') fbq('track','Lead',{loan_type:aLT,currency:'INR'},{eventID:capiEventId});
   fireEvent('generate_lead',{currency:'INR',loan_type:aLT});
-  const cfg2=getCfg();
-  if(cfg2.metaCAPIToken && cfg2.metaPixelId){
-    fetch('https://graph.facebook.com/v18.0/'+cfg2.metaPixelId+'/events?access_token='+cfg2.metaCAPIToken,{
+
+  // Send the matching server-side event via Apps Script — NOT directly to
+  // Meta from the browser. This keeps your CAPI access token out of the
+  // page entirely (it lives only in Apps Script's Script Properties).
+  if(GSHEET_URL && GSHEET_URL.indexOf('PASTE_')!==0){
+    fetch(GSHEET_URL,{
       method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({data:[{event_name:'Lead',event_time:Math.floor(Date.now()/1000),action_source:'website',user_data:{ph:[phone],fn:[name]},custom_data:{loan_type:aLT,currency:'INR'}}]})
+      mode:'no-cors',
+      headers:{'Content-Type':'text/plain'},
+      body:JSON.stringify({action:'sendCAPI',eventId:capiEventId,name:name,phone:phone,loanType:aLT,secret:API_SECRET})
     }).catch(()=>{});
   }
 
