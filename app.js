@@ -11,7 +11,7 @@ const GSHEET_URL = 'https://script.google.com/macros/s/AKfycbw2wtzpfWgahjn_n-2XP
 // Must match API_SECRET in your Apps Script exactly. This only filters out
 // random bots/scanners — it is visible to anyone who views this page's
 // source, so it is not a substitute for real authentication.
-const API_SECRET = 'CHANGE_THIS_TO_A_RANDOM_STRING_1234';
+const API_SECRET = 'StarkLoan';
 
 function sendToSheet(lead){
   if(!GSHEET_URL || GSHEET_URL.indexOf('PASTE_')===0) return Promise.resolve();
