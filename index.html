@@ -589,6 +589,91 @@ function fireEvent(evName, params){
   if(typeof fbq==='function') fbq('track', evName, params||{});
 }
 
+// ── META PIXEL VALUE CALCULATION ──
+// Converts the loan-amount select option into a representative rupee
+// figure. These are the amount-range option strings from the <select
+// id="fa"> exactly as they appear in the form — keep them in sync if the
+// dropdown options ever change.
+const AMOUNT_VALUE_MAP={
+  'Below ₹5 Lakhs':300000,
+  '₹5–10 Lakhs':750000,
+  '₹10–25 Lakhs':1750000,
+  '₹25–50 Lakhs':3750000,
+  '₹50 Lakhs–1 Crore':7500000,
+  'Above ₹1 Crore':12500000
+};
+function amountToNumber(amountStr){
+  return AMOUNT_VALUE_MAP[amountStr]||0;
+}
+
+// Payout % — what StarkLoan earns from the lender per disbursed loan
+const PAYOUT_PCT={'Personal Loan':0.02,'Business Loan':0.02,'Home Loan':0.01,'Loan Against Property':0.01};
+const DEFAULT_PAYOUT_PCT=0.015;
+
+// Closure % — historical lead-to-disbursal conversion rate, used for the
+// initial form-submission value (before documents are in hand)
+const CLOSURE_PCT={'Personal Loan':0.05,'Business Loan':0.04,'Home Loan':0.03,'Loan Against Property':0.03};
+const DEFAULT_CLOSURE_PCT=0.04;
+
+// Boosted closure % — a lead who has uploaded documents is much closer to
+// disbursal, so Lead_DocUpload uses this higher conversion assumption
+const BOOSTED_CLOSURE_PCT={'Personal Loan':0.20,'Business Loan':0.15,'Home Loan':0.12,'Loan Against Property':0.12};
+const DEFAULT_BOOSTED_CLOSURE_PCT=0.15;
+
+function getPayoutPct(loanType){return PAYOUT_PCT[loanType] ?? DEFAULT_PAYOUT_PCT}
+function getClosurePct(loanType){return CLOSURE_PCT[loanType] ?? DEFAULT_CLOSURE_PCT}
+function getBoostedClosurePct(loanType){return BOOSTED_CLOSURE_PCT[loanType] ?? DEFAULT_BOOSTED_CLOSURE_PCT}
+
+// Value = Loan Amount * Payout % * Closure %
+function calcLeadValue(loanType,amountStr){
+  const amount=amountToNumber(amountStr);
+  return Math.round(amount*getPayoutPct(loanType)*getClosurePct(loanType));
+}
+// Doc Value = Loan Amount * Payout % * Boosted Closure %
+function calcDocUploadValue(loanType,amountStr){
+  const amount=amountToNumber(amountStr);
+  return Math.round(amount*getPayoutPct(loanType)*getBoostedClosurePct(loanType));
+}
+
+// Fires a genuinely custom event name via fbq('trackCustom', ...) — Meta
+// treats this differently from fbq('track', ...), which is reserved for
+// its own predefined standard event names. Pass eventId to let Meta
+// deduplicate this browser-side event against a matching server-side
+// Conversions API event carrying the same event_id.
+function fireCustomEvent(evName,params,eventId){
+  if(typeof fbq==='function'){
+    if(eventId) fbq('trackCustom',evName,params||{},{eventID:eventId});
+    else fbq('trackCustom',evName,params||{});
+  }
+  if(typeof gtag==='function') gtag('event',evName,params||{});
+}
+
+// Fired once per successfully-initiated document upload (Aadhaar, PAN,
+// bank statement, etc.) during the application. Uses the boosted closure
+// rate since an applicant with documents in hand is much closer to
+// disbursal than one who has only submitted the form. Also sends a
+// matching server-side CAPI event via Apps Script, sharing the same
+// eventId so Meta counts the browser + server copies as ONE conversion,
+// not two.
+function trackDocUpload(){
+  const amount=document.getElementById('fa').value;
+  const docValue=calcDocUploadValue(aLT,amount);
+  const docEventId='docupload_'+(currentLeadId||Date.now())+'_'+Date.now()+'_'+Math.floor(Math.random()*1e6);
+
+  fireCustomEvent('Lead_DocUpload',{value:docValue,currency:'INR',loan_type:aLT},docEventId);
+
+  if(GSHEET_URL && GSHEET_URL.indexOf('PASTE_')!==0){
+    const name=document.getElementById('fn').value.trim();
+    const phone=document.getElementById('fp').value.trim();
+    fetch(GSHEET_URL,{
+      method:'POST',
+      mode:'no-cors',
+      headers:{'Content-Type':'text/plain'},
+      body:JSON.stringify({action:'sendCAPI',eventName:'Lead_DocUpload',eventId:docEventId,name:name,phone:phone,loanType:aLT,value:docValue,secret:API_SECRET})
+    }).catch(()=>{});
+  }
+}
+
 // Fires a click-intent event BEFORE scrolling — this is what was missing:
 // clicking "Apply for free" never fired any pixel/analytics event before,
 // so Meta had no signal for anyone who clicked but didn't finish the form.
@@ -786,6 +871,7 @@ function docChunkNext(){
       if(f && !f.uploaded){
         f.uploaded=true;
         uploadFileToDrive(rowId,f);
+        trackDocUpload();
       }
     });
   });
@@ -851,6 +937,7 @@ async function handleDocFile(e,key){
       if(rowId){
         docObj.uploaded=true;
         uploadFileToDrive(rowId,docObj);
+        trackDocUpload();
       }
     });
   }catch(err){
@@ -980,11 +1067,7 @@ async function submitLead(){
   // real-world conversion, so Meta should count it once, not twice.
   const capiEventId='lead_'+lead.id;
 
-  // Meta requires a "value" on Lead/generate_lead for ROAS reporting.
-  // 1 is a safe placeholder (a lead isn't guaranteed revenue like an
-  // e-commerce sale) — if you later know your real average value per
-  // lead (e.g. average commission x conversion rate), replace this.
-  const LEAD_VALUE=1;
+  const LEAD_VALUE=calcLeadValue(aLT,amount);
 
   if(typeof fbq==='function') fbq('track','Lead',{loan_type:aLT,currency:'INR',value:LEAD_VALUE},{eventID:capiEventId});
   fireEvent('generate_lead',{currency:'INR',loan_type:aLT,value:LEAD_VALUE});
@@ -997,7 +1080,7 @@ async function submitLead(){
       method:'POST',
       mode:'no-cors',
       headers:{'Content-Type':'text/plain'},
-      body:JSON.stringify({action:'sendCAPI',eventId:capiEventId,name:name,phone:phone,loanType:aLT,value:LEAD_VALUE,secret:API_SECRET})
+      body:JSON.stringify({action:'sendCAPI',eventName:'Lead',eventId:capiEventId,name:name,phone:phone,loanType:aLT,value:LEAD_VALUE,secret:API_SECRET})
     }).catch(()=>{});
   }
 
@@ -1027,6 +1110,7 @@ async function submitLead(){
       if(f && !f.uploaded){
         f.uploaded=true;
         uploadPromises.push(uploadFileToDrive(rowId,f));
+        trackDocUpload();
       }
     });
   }
