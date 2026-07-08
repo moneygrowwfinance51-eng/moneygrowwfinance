@@ -113,10 +113,11 @@ function trackDocUpload(){
   }
 }
 
-// Fires a click-intent event BEFORE scrolling — this is what was missing:
-// clicking "Apply for free" never fired any pixel/analytics event before,
-// so Meta had no signal for anyone who clicked but didn't finish the form.
+// Fires a click-intent event, then opens the application modal (defined
+// in app.js). Every "Apply" / "Check Eligibility" entry point on the page
+// calls this one function with a different `source` label, so we always
+// know which CTA actually drove someone into the form.
 function goToApply(source){
   fireEvent('ApplyIntent',{cta_source:source});
-  document.getElementById('apply').scrollIntoView({behavior:'smooth'});
+  openApplyModal();
 }
