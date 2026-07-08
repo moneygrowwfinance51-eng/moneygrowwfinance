@@ -72,6 +72,36 @@ function toast(msg,type='ok'){
   setTimeout(()=>t.classList.remove('show'),4000);
 }
 
+// ── APPLICATION MODAL ──
+// The intake form lives inside this modal now. Every "Apply"/"Check
+// Eligibility" button on the page calls goToApply() (pixel-tracking.js),
+// which fires a tracking event and then calls openApplyModal() here.
+function openApplyModal(){
+  document.getElementById('applyModalOverlay').style.display='flex';
+  document.body.style.overflow='hidden';
+}
+function closeApplyModal(){
+  document.getElementById('applyModalOverlay').style.display='none';
+  document.body.style.overflow='';
+}
+
+// Friendly, non-"loan"-worded labels for on-page display only. The
+// underlying loanType values ('Personal Loan', 'Business Loan', etc.)
+// are left exactly as-is everywhere else — Google Sheet columns, the
+// WhatsApp message body, and all tracking/value-calculation lookups in
+// pixel-tracking.js key off these exact strings, so renaming them there
+// would silently break the backend. This map only affects what a visitor
+// sees rendered on screen.
+const LOAN_TYPE_DISPLAY={
+  'Personal Loan':'Personal Finance',
+  'Business Loan':'Business Finance',
+  'Home Loan':'Home Finance',
+  'Loan Against Property':'Property-Backed Finance'
+};
+function displayLoanType(lt){
+  return LOAN_TYPE_DISPLAY[lt]||lt;
+}
+
 let aLT='Personal Loan';
 function selTab(k){
   const m={'home':'Home Loan','lap':'Loan Against Property','personal':'Personal Loan','business':'Business Loan'};
@@ -106,11 +136,12 @@ function resetApplyForm(){
   document.getElementById('fi').value='';
   document.getElementById('fc').value='';
   document.getElementById('fexist').value='No existing loan';
+  const consentEl=document.getElementById('fconsent');
+  if(consentEl)consentEl.checked=false;
   docFiles={};
   currentLeadId=null;
   docUploadEventFired=false;
   document.getElementById('sb2').style.background='var(--bdr)';
-  document.getElementById('sb3').style.background='var(--bdr)';
   document.getElementById('step2').style.display='none';
   document.getElementById('step3').style.display='none';
   document.getElementById('step3form').style.display='';
@@ -211,7 +242,7 @@ function getRowId(){
 
 function renderDocRequirements(){
   const cat=empCategory();
-  document.getElementById('docLoanType').textContent=aLT;
+  document.getElementById('docLoanType').textContent=displayLoanType(aLT);
   docChunks=chunkArray(DOC_REQUIREMENTS[cat],3);
   docChunkIndex=0;
   renderDocChunk();
@@ -326,6 +357,8 @@ function goStep2(){
   const phone=document.getElementById('fp').value.trim();
   if(!name){toast('Please enter your full name','err');return}
   if(!/^\d{10}$/.test(phone)){toast('Enter a valid 10-digit phone number','err');return}
+  const consentEl=document.getElementById('fconsent');
+  if(consentEl && !consentEl.checked){toast('Please agree to the Privacy Policy to continue','err');return}
 
   const leads=getLeads();
   currentLeadId=Date.now();
@@ -379,7 +412,6 @@ function goStep3(){
   currentRowId=null;
   rowIdPromise=createLeadAndGetRowId(lead);
 
-  document.getElementById('sb3').style.background='var(--g)';
   document.getElementById('step2').style.display='none';
   document.getElementById('step3').style.display='';
   renderDocRequirements();
@@ -387,7 +419,6 @@ function goStep3(){
 }
 
 function backToStep2(){
-  document.getElementById('sb3').style.background='var(--bdr)';
   document.getElementById('step3').style.display='none';
   document.getElementById('step2').style.display='';
   document.getElementById('step2').scrollIntoView({behavior:'smooth',block:'start'});
