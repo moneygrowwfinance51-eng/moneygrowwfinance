@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>StarkLoan — Best Loan Rates in India</title>
+<title>StarkLoan — Finance Consulting & Facilitation Services in India</title>
 <!-- Google Analytics placeholder - replaced from admin -->
 <script id="ga-script">/* GA_PLACEHOLDER */</script>
 <!-- Meta Pixel placeholder - replaced from admin -->
@@ -152,6 +152,30 @@ footer{background:#0a2d1c;color:#fff;padding:2.5rem 2rem}
   #toast{left:16px;right:16px;bottom:16px;max-width:none}
 }
 @keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
+
+/* APPLICATION MODAL */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(10,20,15,.6);z-index:1000;align-items:flex-start;justify-content:center;padding:5vh 20px;overflow-y:auto}
+.modal-box{background:#fff;border-radius:16px;max-width:640px;width:100%;padding:2rem;position:relative;box-shadow:0 20px 60px rgba(0,0,0,.35);margin-bottom:5vh}
+.modal-close{position:absolute;top:16px;right:16px;background:var(--bg);border:1px solid var(--bdr);border-radius:50%;width:36px;height:36px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--tx);font-family:inherit}
+.modal-close:hover{background:var(--bdr)}
+@media(max-width:640px){
+  .modal-overlay{padding:0}
+  .modal-box{border-radius:0;min-height:100vh;padding:1.5rem 1.25rem 2rem;margin-bottom:0}
+}
+
+/* MID-PAGE / TEASER CTA BUTTON */
+.ctabtn{background:var(--g);color:#fff;font-size:15px;padding:13px 30px;font-weight:700;border-radius:var(--r);border:none;cursor:pointer;font-family:inherit;display:inline-flex;align-items:center;gap:7px}
+.ctabtn:hover{background:var(--gd)}
+
+/* CONSENT CHECKBOX */
+.consent-row{display:flex;align-items:flex-start;gap:9px;margin-top:1.1rem;font-size:12.5px;color:var(--mu);cursor:pointer;line-height:1.55}
+.consent-row input{margin-top:2px;flex-shrink:0;width:16px;height:16px;accent-color:var(--g);cursor:pointer}
+.consent-row a{color:var(--g);text-decoration:underline}
+
+/* FLOATING WHATSAPP BUTTON */
+.fab-wa{position:fixed;bottom:24px;left:24px;width:56px;height:56px;border-radius:50%;background:#25D366;color:#fff;display:flex;align-items:center;justify-content:center;font-size:28px;box-shadow:0 6px 20px rgba(0,0,0,.28);z-index:900;transition:.15s}
+.fab-wa:hover{transform:scale(1.08)}
+@media(max-width:640px){.fab-wa{width:50px;height:50px;font-size:24px;bottom:16px;left:16px}}
 </style><!-- Meta Pixel Code -->
 <script>
 !function(f,b,e,v,n,t,s)
@@ -210,27 +234,21 @@ src="https://www.facebook.com/tr?id=2041090346480777&ev=PageView&noscript=1"
   </div>
   <button class="nburger" id="nburger" aria-label="Menu" onclick="toggleMenu()"><svg class="icon"><use id="nburgerIcon" href="#icon-menu-2"/></svg></button>
   <div class="nlinks" id="nlinks">
-    <a href="#loans" onclick="closeMenu()">Loans</a>
+    <a href="#loans" onclick="closeMenu()">Finance Options</a>
     <a href="#process" onclick="closeMenu()">Process</a>
-    <a href="#apply" onclick="closeMenu()">Apply</a>
+    <a href="javascript:void(0)" onclick="closeMenu();goToApply('nav_link')">Apply</a>
     <a href="#why" onclick="closeMenu()">About</a>
-    <button class="nbtn" onclick="closeMenu();goToApply('nav_button')"><svg class="icon"><use href="#icon-arrow-right"/></svg> Apply now</button>
+    <button class="nbtn" onclick="closeMenu();goToApply('nav_button')"><svg class="icon"><use href="#icon-arrow-right"/></svg> Check Eligibility</button>
   </div>
 </nav>
 
 <section class="hero">
   <div class="hero-in">
     <div class="eye"><svg class="icon"><use href="#icon-shield-check"/></svg> RBI-Regulated Bank &amp; NBFC Partners</div>
-    <h1>Smarter loans,<br><span>engineered for you</span></h1>
-    <p>Expert financial consulting for home loans, personal loans, business loans &amp; more. Get the best rate — guaranteed.</p>
-    <div class="hstats">
-      <div class="hstat"><strong>₹500Cr+</strong><span>Loans disbursed</span></div>
-      <div class="hstat"><strong>15,000+</strong><span>Happy clients</span></div>
-      <div class="hstat"><strong>98%</strong><span>Approval rate</span></div>
-      <div class="hstat"><strong>24 hrs</strong><span>Response time</span></div>
-    </div>
+    <h1>Smarter finance,<br><span>engineered for you</span></h1>
+    <p>Expert consulting to help you explore home finance, personal finance, business finance &amp; more options.</p>
     <div class="hcta">
-      <button class="btnw" onclick="goToApply('hero_button')"><svg class="icon"><use href="#icon-send"/></svg> Apply for free</button>
+      <button class="btnw" onclick="goToApply('hero_button')"><svg class="icon"><use href="#icon-send"/></svg> Check Eligibility</button>
       <a href="tel:+917073177874" class="btng2"><svg class="icon"><use href="#icon-phone"/></svg> Call us now</a>
     </div>
   </div>
@@ -256,58 +274,70 @@ src="https://www.facebook.com/tr?id=2041090346480777&ev=PageView&noscript=1"
 </div>
 
 <div class="sec" id="loans">
-  <div class="sec-eye">Our products</div>
-  <div class="sec-t">Loan solutions for every need</div>
-  <p class="sec-s">Compare rates across 20+ lenders. We do the work — you get the best deal.</p>
+  <div class="sec-eye">Our services</div>
+  <div class="sec-t">Finance options for every need</div>
+  <p class="sec-s">We help you compare options across 20+ lending partners.</p>
   <div class="lgrid">
     <div class="lcard" onclick="selTab('personal')">
       <div class="lic" style="background:#e0f2fe"><svg class="icon" style="color:var(--teal)"><use href="#icon-user"/></svg></div>
-      <h3>Personal Loan</h3><p>Instant funds for travel, medical emergencies, education, weddings, or any personal need.</p>
+      <h3>Personal Finance</h3><p>Instant funds for travel, medical emergencies, education, weddings, or any personal need.</p>
       <div class="lrate" style="color:var(--teal)">10.50%</div><div class="lratel">Indicative rate p.a.* — subject to eligibility</div>
-      <span class="lchip" style="background:#e0f2fe;color:var(--teal)"><svg class="icon" style="font-size:11px"><use href="#icon-bolt"/></svg> Same-day disbursal</span>
+      <span class="lchip" style="background:#e0f2fe;color:var(--teal)"><svg class="icon" style="font-size:11px"><use href="#icon-bolt"/></svg> Fast disbursal options</span>
     </div>
     <div class="lcard" onclick="selTab('business')">
       <div class="lic" style="background:#ede9fe"><svg class="icon" style="color:var(--purple)"><use href="#icon-briefcase"/></svg></div>
-      <h3>Business Loan</h3><p>Working capital, expansion, equipment financing — fuel your business growth with flexible terms.</p>
+      <h3>Business Finance</h3><p>Working capital, expansion, equipment financing — fuel your business growth with flexible terms.</p>
       <div class="lrate" style="color:var(--purple)">11.00%</div><div class="lratel">Indicative rate p.a.* — subject to eligibility</div>
       <span class="lchip" style="background:#ede9fe;color:var(--purple)"><svg class="icon" style="font-size:11px"><use href="#icon-chart-line"/></svg> No collateral options</span>
     </div>
     <div class="lcard" onclick="selTab('home')">
       <div class="lic" style="background:var(--gl)"><svg class="icon" style="color:var(--g)"><use href="#icon-home"/></svg></div>
-      <h3>Home Loan</h3><p>Buy, construct, or renovate your dream home with the lowest interest rates and tenure up to 30 years.</p>
+      <h3>Home Finance</h3><p>Buy, construct, or renovate your home with competitive interest rates and tenure up to 30 years.</p>
       <div class="lrate" style="color:var(--g)">8.40%</div><div class="lratel">Indicative rate p.a.* — subject to eligibility</div>
-      <span class="lchip"><svg class="icon" style="font-size:11px"><use href="#icon-clock"/></svg> 3-day approval</span>
+      <span class="lchip"><svg class="icon" style="font-size:11px"><use href="#icon-clock"/></svg> Quick approval process</span>
     </div>
     <div class="lcard" onclick="selTab('lap')">
       <div class="lic" style="background:#fdf6e3"><svg class="icon" style="color:var(--gold)"><use href="#icon-building"/></svg></div>
-      <h3>Loan Against Property</h3><p>Unlock the value of your residential or commercial property to meet any financial requirement.</p>
+      <h3>Property-Backed Finance</h3><p>Unlock the value of your residential or commercial property to meet any financial requirement.</p>
       <div class="lrate" style="color:var(--gold)">9.25%</div><div class="lratel">Indicative rate p.a.* — subject to eligibility</div>
       <span class="lchip" style="background:#fdf6e3;color:var(--gold)"><span style="font-size:11px">₹</span> Up to 70% of value</span>
     </div>
   </div>
-  <p style="font-size:12px;color:var(--mu);margin-top:1.25rem">*Rates shown are indicative starting rates from our partner banks/NBFCs and vary based on credit score, income, loan tenure &amp; lender policy at the time of application. Final rate is confirmed by the lender only.</p>
+  <p style="font-size:12px;color:var(--mu);margin-top:1.25rem">*Rates shown are indicative starting rates from our partner banks/NBFCs and vary based on credit score, income, tenure &amp; lender policy at the time of application. Final rate is confirmed by the lender only.</p>
+  <div style="text-align:center;margin-top:2.5rem">
+    <button class="ctabtn" onclick="goToApply('mid_page_section')"><svg class="icon"><use href="#icon-arrow-right"/></svg> Check Eligibility</button>
+  </div>
 </div>
 
 <div class="psec" id="process">
   <div class="pinn">
     <div style="text-align:center;margin-bottom:2rem">
       <div class="sec-eye" style="display:flex;justify-content:center">How it works</div>
-      <div class="sec-t" style="margin-bottom:0">Get your loan in 3 simple steps</div>
+      <div class="sec-t" style="margin-bottom:0">Get started in 3 simple steps</div>
     </div>
     <div class="steps">
       <div class="step"><div class="stepn">1</div><h4>Fill Details</h4><p>Share your details in under 2 minutes</p></div>
-      <div class="step"><div class="stepn">2</div><h4>Upload Docs</h4><p>Securely send your documents on our WhatsApp channel</p></div>
-      <div class="step"><div class="stepn">3</div><h4>Executive Callback</h4><p>Expert calls within 24 hours — money in your account fast</p></div>
+      <div class="step"><div class="stepn">2</div><h4>Upload Docs</h4><p>Upload your documents securely, right on the site</p></div>
+      <div class="step"><div class="stepn">3</div><h4>Executive Callback</h4><p>Our team calls to guide you through the next steps</p></div>
     </div>
   </div>
 </div>
 
-<div class="asec" id="apply">
-  <div class="ainn">
-    <div style="margin-bottom:1.75rem">
+<div class="sec" id="apply" style="text-align:center">
+  <div class="sec-eye" style="display:flex;justify-content:center">Free consultation</div>
+  <div class="sec-t">Check your eligibility in 2 minutes</div>
+  <p class="sec-s" style="margin-left:auto;margin-right:auto">Share a few details and our team will get in touch — no fees, no obligation.</p>
+  <button class="ctabtn" onclick="goToApply('apply_section')"><svg class="icon"><use href="#icon-arrow-right"/></svg> Check Eligibility</button>
+</div>
+
+<div class="modal-overlay" id="applyModalOverlay">
+  <div class="modal-box">
+    <button class="modal-close" type="button" onclick="closeApplyModal()" aria-label="Close"><svg class="icon"><use href="#icon-x"/></svg></button>
+
+    <div style="margin-bottom:1.5rem">
       <div class="sec-eye">Free consultation</div>
-      <div class="sec-t" style="margin-bottom:6px">Apply in 2 minutes</div>
-      <p style="color:var(--mu);font-size:14px">No fees. No spam. Fill your details &amp; our expert will call you within 24 hours.</p>
+      <div class="sec-t" style="margin-bottom:6px;font-size:1.5rem">Check your eligibility</div>
+      <p style="color:var(--mu);font-size:14px">No fees. No spam. Fill your details &amp; our team will get in touch.</p>
     </div>
 
     <div style="background:var(--gl);border:1px solid #86efac;border-radius:var(--r);padding:1.25rem 1.4rem;margin-bottom:1.5rem">
@@ -315,15 +345,15 @@ src="https://www.facebook.com/tr?id=2041090346480777&ev=PageView&noscript=1"
       <div style="font-size:15.5px;color:var(--tx);line-height:1.75">
         <div style="margin-bottom:6px"><strong>1. Fill Your Details</strong> — Enter your basic qualification criteria below.</div>
         <div style="margin-bottom:6px"><strong>2. Upload Docs</strong> — Attach your documents securely, right here on the site.</div>
-        <div><strong>3. Executive Callback</strong> — Our loan officer will call you within 24 hours to confirm your eligible amount and interest rates.</div>
+        <div><strong>3. Executive Callback</strong> — Our finance specialist will call you within 24 hours to discuss your eligible amount and rates.</div>
       </div>
     </div>
 
     <div class="ltabs">
-      <button class="ltab active" id="tab-personal" onclick="selTab('personal')"><svg class="icon"><use href="#icon-user"/></svg> Personal Loan</button>
-      <button class="ltab" id="tab-business" onclick="selTab('business')"><svg class="icon"><use href="#icon-briefcase"/></svg> Business Loan</button>
-      <button class="ltab" id="tab-home" onclick="selTab('home')"><svg class="icon"><use href="#icon-home"/></svg> Home Loan</button>
-      <button class="ltab" id="tab-lap" onclick="selTab('lap')"><svg class="icon"><use href="#icon-building"/></svg> Loan Against Property</button>
+      <button class="ltab active" id="tab-personal" onclick="selTab('personal')"><svg class="icon"><use href="#icon-user"/></svg> Personal Finance</button>
+      <button class="ltab" id="tab-business" onclick="selTab('business')"><svg class="icon"><use href="#icon-briefcase"/></svg> Business Finance</button>
+      <button class="ltab" id="tab-home" onclick="selTab('home')"><svg class="icon"><use href="#icon-home"/></svg> Home Finance</button>
+      <button class="ltab" id="tab-lap" onclick="selTab('lap')"><svg class="icon"><use href="#icon-building"/></svg> Property-Backed Finance</button>
     </div>
 
     <form id="applyForm" autocomplete="on" onsubmit="event.preventDefault();return false">
@@ -331,7 +361,6 @@ src="https://www.facebook.com/tr?id=2041090346480777&ev=PageView&noscript=1"
     <div style="display:flex;gap:8px;margin-bottom:1.25rem" id="stepBar">
       <div style="flex:1;height:4px;border-radius:4px;background:var(--g)" id="sb1"></div>
       <div style="flex:1;height:4px;border-radius:4px;background:var(--bdr)" id="sb2"></div>
-      <div style="flex:1;height:4px;border-radius:4px;background:var(--bdr)" id="sb3"></div>
     </div>
 
     <div id="step1">
@@ -342,6 +371,10 @@ src="https://www.facebook.com/tr?id=2041090346480777&ev=PageView&noscript=1"
           <input id="fp" name="tel" type="tel" placeholder="10-digit mobile" maxlength="10" autocomplete="tel" inputmode="numeric" oninput="onPhoneInput()" style="border-radius:var(--r)">
         </div>
       </div>
+      <label class="consent-row">
+        <input type="checkbox" id="fconsent">
+        <span>I agree to the <a href="privacy-policy.html" target="_blank" rel="noopener">Privacy Policy</a> and authorize StarkLoan to contact me regarding finance options.</span>
+      </label>
       <button class="abtn" type="button" id="nextBtn" onclick="goStep2()">
         Next <svg class="icon"><use href="#icon-arrow-right"/></svg>
       </button>
@@ -349,7 +382,7 @@ src="https://www.facebook.com/tr?id=2041090346480777&ev=PageView&noscript=1"
 
     <div id="step2" style="display:none">
       <div class="fgrid">
-        <div class="feld"><label>Loan Amount Required *</label>
+        <div class="feld"><label>Finance Amount Required *</label>
           <select id="fa">
             <option value="">— Select amount —</option>
             <option>Below ₹5 Lakhs</option><option>₹5–10 Lakhs</option>
@@ -372,14 +405,14 @@ src="https://www.facebook.com/tr?id=2041090346480777&ev=PageView&noscript=1"
           </select>
         </div>
         <div class="feld"><label>City / Location</label><input id="fc" name="address-level2" type="text" placeholder="Your city" autocomplete="address-level2"></div>
-        <div class="feld"><label>Any Existing Loan?</label>
+        <div class="feld"><label>Any Existing Finance?</label>
           <select id="fexist">
-            <option value="No existing loan">No existing loan</option>
-            <option value="Personal Loan - Below 2 Lakh">Personal Loan — Below ₹2 Lakh</option>
-            <option value="Personal Loan - 2-5 Lakh">Personal Loan — ₹2–5 Lakh</option>
-            <option value="Personal Loan - Above 5 Lakh">Personal Loan — Above ₹5 Lakh</option>
-            <option value="Home Loan">Home Loan</option>
-            <option value="Business Loan">Business Loan</option>
+            <option value="No existing loan">No existing finance</option>
+            <option value="Personal Loan - Below 2 Lakh">Personal Finance — Below ₹2 Lakh</option>
+            <option value="Personal Loan - 2-5 Lakh">Personal Finance — ₹2–5 Lakh</option>
+            <option value="Personal Loan - Above 5 Lakh">Personal Finance — Above ₹5 Lakh</option>
+            <option value="Home Loan">Home Finance</option>
+            <option value="Business Loan">Business Finance</option>
             <option value="Other">Other</option>
           </select>
         </div>
@@ -397,7 +430,7 @@ src="https://www.facebook.com/tr?id=2041090346480777&ev=PageView&noscript=1"
     <div id="step3" style="display:none">
       <div id="step3form">
       <div style="margin-bottom:1.1rem">
-        <h4 style="font-size:15px;font-weight:700;margin-bottom:4px">Documents required for <span id="docLoanType">your loan</span></h4>
+        <h4 style="font-size:15px;font-weight:700;margin-bottom:4px">Documents required for <span id="docLoanType">your finance option</span></h4>
         <p style="font-size:12px;color:var(--mu);margin:0">Optional now — PDF/JPG/PNG, max 5MB each</p>
         <p style="font-size:11.5px;color:var(--mu);margin:6px 0 0">This is the minimum list — the lending bank/NBFC may request additional documents as per their own policy.</p>
       </div>
@@ -423,7 +456,7 @@ src="https://www.facebook.com/tr?id=2041090346480777&ev=PageView&noscript=1"
         </div>
         <h4 style="font-size:17px;font-weight:700;margin-bottom:6px">Securing your documents…</h4>
         <p style="font-size:13px;color:var(--mu);max-width:340px;margin:0 auto 14px;line-height:1.6">While that finishes — one quick question:</p>
-        <p style="font-size:14.5px;font-weight:700;margin-bottom:14px">What matters most to you in this loan?</p>
+        <p style="font-size:14.5px;font-weight:700;margin-bottom:14px">What matters most to you?</p>
         <div id="engageOpts" style="display:flex;flex-wrap:wrap;gap:8px;justify-content:center;max-width:360px;margin:0 auto 20px">
           <button type="button" class="ltab" onclick="engageAnswered(this,'Lowest interest rate')">Lowest interest rate</button>
           <button type="button" class="ltab" onclick="engageAnswered(this,'Fast disbursal')">Fast disbursal</button>
@@ -446,40 +479,27 @@ src="https://www.facebook.com/tr?id=2041090346480777&ev=PageView&noscript=1"
       </div>
     </div>
     </form>
-    </div>
   </div>
 </div>
 
 <div class="sec" id="why">
   <div class="sec-eye">Why StarkLoan</div>
-  <div class="sec-t">India's most trusted loan consultant</div>
+  <div class="sec-t">India's dedicated finance consulting partner</div>
   <p class="sec-s">We're not a bank — we're your advisor. We work for you, not the lender.</p>
   <div class="wgrid">
-    <div class="wcard"><div class="wic" style="background:var(--gl)"><svg class="icon" style="color:var(--g)"><use href="#icon-percentage"/></svg></div><h4>Lowest rate guarantee</h4><p>We compare 20+ banks and NBFCs to find you the absolute best interest rate available.</p></div>
-    <div class="wcard"><div class="wic" style="background:#fdf6e3"><svg class="icon" style="color:var(--gold)"><use href="#icon-clock"/></svg></div><h4>24-hour response</h4><p>Our expert team calls back within one business day — no waiting, no chasing.</p></div>
+    <div class="wcard"><div class="wic" style="background:var(--gl)"><svg class="icon" style="color:var(--g)"><use href="#icon-percentage"/></svg></div><h4>Rate comparison support</h4><p>We help you compare options across 20+ banks and NBFCs to find competitive rates.</p></div>
+    <div class="wcard"><div class="wic" style="background:#fdf6e3"><svg class="icon" style="color:var(--gold)"><use href="#icon-clock"/></svg></div><h4>24-hour response</h4><p>Our team calls back within one business day — no waiting, no chasing.</p></div>
     <div class="wcard"><div class="wic" style="background:#e0f2fe"><svg class="icon" style="color:var(--teal)"><use href="#icon-file-certificate"/></svg></div><h4>Minimal documentation</h4><p>We simplify the paperwork and guide you through every step of the process.</p></div>
-    <div class="wcard"><div class="wic" style="background:#ede9fe"><svg class="icon" style="color:var(--purple)"><use href="#icon-shield-check"/></svg></div><h4>Zero hidden charges</h4><p>Completely transparent. No processing fees, no surprise deductions, ever.</p></div>
-    <div class="wcard"><div class="wic" style="background:var(--gl)"><svg class="icon" style="color:var(--g)"><use href="#icon-users"/></svg></div><h4>Dedicated advisor</h4><p>One personal loan advisor stays with you from application to final disbursement.</p></div>
-    <div class="wcard"><div class="wic" style="background:#fee2e2"><svg class="icon" style="color:var(--red)"><use href="#icon-heart"/></svg></div><h4>15,000+ happy clients</h4><p>Families and businesses have grown with StarkLoan since 2019.</p></div>
-  </div>
-</div>
-
-<div style="background:var(--gl);padding:4rem 2rem">
-  <div style="max-width:1100px;margin:0 auto">
-    <div class="sec-eye">What clients say</div>
-    <div class="sec-t">Real stories, real results</div>
-    <div class="tgrid">
-      <div class="tcar"><div class="tstar">★★★★★</div><p>"Got my home loan approved in 4 days. StarkLoan negotiated a rate my bank refused. Saved nearly ₹3 lakhs in interest."</p><div class="tauth"><div class="tav">RK</div><div><div style="font-size:13px;font-weight:600">Rajesh Kumar</div><div style="font-size:11px;color:var(--mu)">Jaipur, Home Loan — ₹45L</div></div></div></div>
-      <div class="tcar"><div class="tstar">★★★★★</div><p>"Rejected by 2 banks before StarkLoan. Their team found the right lender and got my business loan sanctioned in a week."</p><div class="tauth"><div class="tav">PM</div><div><div style="font-size:13px;font-weight:600">Priya Mehra</div><div style="font-size:11px;color:var(--mu)">Udaipur, Business Loan — ₹25L</div></div></div></div>
-      <div class="tcar"><div class="tstar">★★★★★</div><p>"Super professional team. The loan against property process was completely hassle-free. Highly recommend."</p><div class="tauth"><div class="tav">AS</div><div><div style="font-size:13px;font-weight:600">Amit Sharma</div><div style="font-size:11px;color:var(--mu)">Jodhpur, LAP — ₹80L</div></div></div></div>
-    </div>
+    <div class="wcard"><div class="wic" style="background:#ede9fe"><svg class="icon" style="color:var(--purple)"><use href="#icon-shield-check"/></svg></div><h4>Zero hidden charges</h4><p>Full transparency on our own consulting fees — no hidden charges on our end.</p></div>
+    <div class="wcard"><div class="wic" style="background:var(--gl)"><svg class="icon" style="color:var(--g)"><use href="#icon-users"/></svg></div><h4>Dedicated advisor</h4><p>One dedicated finance advisor stays with you from application to final decision.</p></div>
+    <div class="wcard"><div class="wic" style="background:#fee2e2"><svg class="icon" style="color:var(--red)"><use href="#icon-heart"/></svg></div><h4>Client-first approach</h4><p>We prioritize genuine guidance over pushing products you don't need.</p></div>
   </div>
 </div>
 
 <div class="ctaban">
-  <h2>Ready to grow your money?</h2>
-  <p>Apply now — it's free, takes 2 minutes, and our expert calls you within 24 hours</p>
-  <button class="btnw" onclick="goToApply('bottom_cta')"><svg class="icon"><use href="#icon-arrow-right"/></svg> Apply for free today</button>
+  <h2>Ready to explore your finance options?</h2>
+  <p>Get started — it takes 2 minutes, and our team will reach out to guide you.</p>
+  <button class="btnw" onclick="goToApply('bottom_cta')"><svg class="icon"><use href="#icon-arrow-right"/></svg> Check Eligibility</button>
 </div>
 
 <footer>
@@ -489,30 +509,34 @@ src="https://www.facebook.com/tr?id=2041090346480777&ev=PageView&noscript=1"
         <div class="nicon"><svg class="icon"><use href="#icon-trending-up"/></svg></div>
         <div><div style="font-family:var(--font-display);font-size:17px;font-weight:700;letter-spacing:-.02em">StarkLoan</div><div style="font-size:11px;opacity:.5">Financial Consultant</div></div>
       </div>
-      <p style="font-size:13px;opacity:.55;margin-top:8px;line-height:1.7;max-width:280px">StarkLoan is a loan facilitation service. We are not a bank or NBFC — we connect borrowers with our RBI-regulated bank &amp; NBFC partners and do not sanction or disburse loans ourselves.</p>
+      <p style="font-size:13px;opacity:.55;margin-top:8px;line-height:1.7;max-width:280px">StarkLoan is a financial consulting and facilitation platform partnering with RBI-regulated banks &amp; NBFCs. We are not a bank, NBFC, or direct lending institution — we do not sanction or disburse funds ourselves.</p>
       <p style="font-size:12px;opacity:.4;margin-top:10px;max-width:280px">Registered address: Durga Nursery Road, Mangalam Fun Square, Udaipur, Rajasthan – 313001 · DSA ID: [Add registration no.]</p>
     </div>
     <div class="fcol">
-      <h5>Loan Products</h5>
-      <a href="#loans">Home Loan</a><a href="#loans">Loan Against Property</a><a href="#loans">Personal Loan</a><a href="#loans">Business Loan</a>
+      <h5>Finance Options</h5>
+      <a href="#loans">Home Finance</a><a href="#loans">Property-Backed Finance</a><a href="#loans">Personal Finance</a><a href="#loans">Business Finance</a>
     </div>
     <div class="fcol">
       <h5>Contact</h5>
       <a href="tel:+917073177874">+91 70731 77874</a>
       <a href="mailto:info@moneygroww.in">info@moneygroww.in</a>
-      <a href="#apply">Apply online</a>
+      <a href="javascript:void(0)" onclick="goToApply('footer_link')">Apply online</a>
     </div>
   </div>
   <div class="fbott">
     <p>© 2025 StarkLoan. All rights reserved.</p>
     <p style="display:flex;gap:14px;flex-wrap:wrap">
       <a href="privacy-policy.html" style="opacity:.6;font-size:12px">Privacy Policy</a>
-      <a href="terms-of-service.html" style="opacity:.6;font-size:12px">Terms of Service</a>
+      <a href="terms-of-service.html" style="opacity:.6;font-size:12px">Terms &amp; Conditions</a>
       <a href="grievance-redressal.html" style="opacity:.6;font-size:12px">Grievance Redressal</a>
     </p>
-    <p>Loans facilitated via RBI-regulated partner banks &amp; NBFCs</p>
+    <p>Finance facilitated via RBI-regulated partner banks &amp; NBFCs</p>
   </div>
 </footer>
+
+<a href="https://wa.me/917073177874" target="_blank" rel="noopener noreferrer" class="fab-wa" aria-label="Chat with us on WhatsApp">
+  <svg class="icon"><use href="#icon-brand-whatsapp"/></svg>
+</a>
 
 <div id="toast"></div>
 
