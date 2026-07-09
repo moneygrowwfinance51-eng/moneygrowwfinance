@@ -4,8 +4,20 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>StarkLoan — Finance Consulting & Facilitation Services in India</title>
-<!-- Google Analytics placeholder - replaced from admin -->
-<script id="ga-script">/* GA_PLACEHOLDER */</script>
+<!-- Google Analytics — replace G-XXXXXXXXXX with your real GA4 Measurement ID (Google Analytics → Admin → Data Streams → your web stream) -->
+<script id="ga-script">
+  (function(){
+    var gaScript=document.createElement('script');
+    gaScript.async=true;
+    gaScript.src='https://www.googletagmanager.com/gtag/js?id=G-XXXXXXXXXX';
+    document.head.appendChild(gaScript);
+    window.dataLayer=window.dataLayer||[];
+    function gtag(){dataLayer.push(arguments);}
+    window.gtag=gtag;
+    gtag('js',new Date());
+    gtag('config','G-XXXXXXXXXX');
+  })();
+</script>
 <!-- Meta Pixel placeholder - replaced from admin -->
 <script id="meta-pixel">/* META_PLACEHOLDER */</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -163,7 +175,13 @@ footer{background:#0a2d1c;color:#fff;padding:2.5rem 2rem}
   .modal-box{border-radius:0;min-height:100vh;padding:1.5rem 1.25rem 2rem;margin-bottom:0}
 }
 
-/* MID-PAGE / TEASER CTA BUTTON */
+/* FAQ ACCORDION */
+.faq-item{border-bottom:1px solid var(--bdr);padding:16px 0}
+.faq-item summary{cursor:pointer;font-weight:600;font-size:15px;list-style:none;display:flex;justify-content:space-between;align-items:center;gap:12px}
+.faq-item summary::-webkit-details-marker{display:none}
+.faq-item summary::after{content:'+';font-size:22px;color:var(--g);flex-shrink:0;transition:.2s}
+.faq-item[open] summary::after{content:'−'}
+.faq-item p{margin-top:10px;font-size:14px;color:var(--mu);line-height:1.65}
 .ctabtn{background:var(--g);color:#fff;font-size:15px;padding:13px 30px;font-weight:700;border-radius:var(--r);border:none;cursor:pointer;font-family:inherit;display:inline-flex;align-items:center;gap:7px}
 .ctabtn:hover{background:var(--gd)}
 
@@ -173,9 +191,9 @@ footer{background:#0a2d1c;color:#fff;padding:2.5rem 2rem}
 .consent-row a{color:var(--g);text-decoration:underline}
 
 /* FLOATING WHATSAPP BUTTON */
-.fab-wa{position:fixed;bottom:24px;left:24px;width:56px;height:56px;border-radius:50%;background:#25D366;color:#fff;display:flex;align-items:center;justify-content:center;font-size:28px;box-shadow:0 6px 20px rgba(0,0,0,.28);z-index:900;transition:.15s}
+.fab-wa{position:fixed;bottom:96px;right:24px;width:56px;height:56px;border-radius:50%;background:#25D366;color:#fff;display:flex;align-items:center;justify-content:center;font-size:28px;box-shadow:0 6px 20px rgba(0,0,0,.28);z-index:900;transition:.15s}
 .fab-wa:hover{transform:scale(1.08)}
-@media(max-width:640px){.fab-wa{width:50px;height:50px;font-size:24px;bottom:16px;left:16px}}
+@media(max-width:640px){.fab-wa{width:50px;height:50px;font-size:24px;bottom:88px;right:16px}}
 </style><!-- Meta Pixel Code -->
 <script>
 !function(f,b,e,v,n,t,s)
@@ -229,16 +247,16 @@ src="https://www.facebook.com/tr?id=2041090346480777&ev=PageView&noscript=1"
 
 <nav>
   <div class="nbrand">
-    <div class="nicon"><svg class="icon"><use href="#icon-trending-up"/></svg></div>
+    <div class="nicon"><img src="logo.png" alt="StarkLoan logo" style="width:22px;height:22px;object-fit:contain"></div>
     <div><div class="nname">StarkLoan</div><span class="ntag">Financial Consultant</span></div>
   </div>
   <button class="nburger" id="nburger" aria-label="Menu" onclick="toggleMenu()"><svg class="icon"><use id="nburgerIcon" href="#icon-menu-2"/></svg></button>
   <div class="nlinks" id="nlinks">
     <a href="#loans" onclick="closeMenu()">Finance Options</a>
-    <a href="#process" onclick="closeMenu()">Process</a>
+    <a href="#process" onclick="closeMenu()">FAQs</a>
     <a href="javascript:void(0)" onclick="closeMenu();goToApply('nav_link')">Apply</a>
     <a href="#why" onclick="closeMenu()">About</a>
-    <button class="nbtn" onclick="closeMenu();goToApply('nav_button')"><svg class="icon"><use href="#icon-arrow-right"/></svg> Check Eligibility</button>
+    <button class="nbtn" onclick="closeMenu();goToApply('nav_button')"><svg class="icon"><use href="#icon-arrow-right"/></svg> Apply Now</button>
   </div>
 </nav>
 
@@ -248,7 +266,7 @@ src="https://www.facebook.com/tr?id=2041090346480777&ev=PageView&noscript=1"
     <h1>Smarter finance,<br><span>engineered for you</span></h1>
     <p>Expert consulting to help you explore home finance, personal finance, business finance &amp; more options.</p>
     <div class="hcta">
-      <button class="btnw" onclick="goToApply('hero_button')"><svg class="icon"><use href="#icon-send"/></svg> Check Eligibility</button>
+      <button class="btnw" onclick="goToApply('hero_button')"><svg class="icon"><use href="#icon-send"/></svg> Apply Now</button>
       <a href="tel:+917073177874" class="btng2"><svg class="icon"><use href="#icon-phone"/></svg> Call us now</a>
     </div>
   </div>
@@ -305,20 +323,37 @@ src="https://www.facebook.com/tr?id=2041090346480777&ev=PageView&noscript=1"
   </div>
   <p style="font-size:12px;color:var(--mu);margin-top:1.25rem">*Rates shown are indicative starting rates from our partner banks/NBFCs and vary based on credit score, income, tenure &amp; lender policy at the time of application. Final rate is confirmed by the lender only.</p>
   <div style="text-align:center;margin-top:2.5rem">
-    <button class="ctabtn" onclick="goToApply('mid_page_section')"><svg class="icon"><use href="#icon-arrow-right"/></svg> Check Eligibility</button>
+    <button class="ctabtn" onclick="goToApply('mid_page_section')"><svg class="icon"><use href="#icon-arrow-right"/></svg> Apply Now</button>
   </div>
 </div>
 
 <div class="psec" id="process">
   <div class="pinn">
     <div style="text-align:center;margin-bottom:2rem">
-      <div class="sec-eye" style="display:flex;justify-content:center">How it works</div>
-      <div class="sec-t" style="margin-bottom:0">Get started in 3 simple steps</div>
+      <div class="sec-eye" style="display:flex;justify-content:center">Common questions</div>
+      <div class="sec-t" style="margin-bottom:0">Frequently Asked Questions</div>
     </div>
-    <div class="steps">
-      <div class="step"><div class="stepn">1</div><h4>Fill Details</h4><p>Share your details in under 2 minutes</p></div>
-      <div class="step"><div class="stepn">2</div><h4>Upload Docs</h4><p>Upload your documents securely, right on the site</p></div>
-      <div class="step"><div class="stepn">3</div><h4>Executive Callback</h4><p>Our team calls to guide you through the next steps</p></div>
+    <div style="max-width:700px;margin:0 auto">
+      <details class="faq-item">
+        <summary>How does the process work?</summary>
+        <p>Share a few basic details with us, and our team will guide you through the rest over a call. There's no obligation and no fee to check your eligibility.</p>
+      </details>
+      <details class="faq-item">
+        <summary>What documents will I need?</summary>
+        <p>Requirements vary by finance type and lender, but typically include Aadhaar, PAN, and income proof. Our team will confirm the exact list for your case during the callback.</p>
+      </details>
+      <details class="faq-item">
+        <summary>Is there a fee to apply?</summary>
+        <p>No. Checking your eligibility and speaking with our team is completely free.</p>
+      </details>
+      <details class="faq-item">
+        <summary>Who will contact me, and how?</summary>
+        <p>A StarkLoan finance specialist will reach out by phone within 24 hours of your submission to discuss your options.</p>
+      </details>
+      <details class="faq-item">
+        <summary>Is my information safe?</summary>
+        <p>Yes. Your details are kept confidential and are only shared with the RBI-regulated banks/NBFCs relevant to your application.</p>
+      </details>
     </div>
   </div>
 </div>
@@ -327,7 +362,7 @@ src="https://www.facebook.com/tr?id=2041090346480777&ev=PageView&noscript=1"
   <div class="sec-eye" style="display:flex;justify-content:center">Free consultation</div>
   <div class="sec-t">Check your eligibility in 2 minutes</div>
   <p class="sec-s" style="margin-left:auto;margin-right:auto">Share a few details and our team will get in touch — no fees, no obligation.</p>
-  <button class="ctabtn" onclick="goToApply('apply_section')"><svg class="icon"><use href="#icon-arrow-right"/></svg> Check Eligibility</button>
+  <button class="ctabtn" onclick="goToApply('apply_section')"><svg class="icon"><use href="#icon-arrow-right"/></svg> Apply Now</button>
 </div>
 
 <div class="modal-overlay" id="applyModalOverlay">
@@ -338,15 +373,6 @@ src="https://www.facebook.com/tr?id=2041090346480777&ev=PageView&noscript=1"
       <div class="sec-eye">Free consultation</div>
       <div class="sec-t" style="margin-bottom:6px;font-size:1.5rem">Check your eligibility</div>
       <p style="color:var(--mu);font-size:14px">No fees. No spam. Fill your details &amp; our team will get in touch.</p>
-    </div>
-
-    <div style="background:var(--gl);border:1px solid #86efac;border-radius:var(--r);padding:1.25rem 1.4rem;margin-bottom:1.5rem">
-      <div style="font-weight:700;font-size:17px;color:var(--gd);margin-bottom:10px">📋 How It Works</div>
-      <div style="font-size:15.5px;color:var(--tx);line-height:1.75">
-        <div style="margin-bottom:6px"><strong>1. Fill Your Details</strong> — Enter your basic qualification criteria below.</div>
-        <div style="margin-bottom:6px"><strong>2. Upload Docs</strong> — Attach your documents securely, right here on the site.</div>
-        <div><strong>3. Executive Callback</strong> — Our finance specialist will call you within 24 hours to discuss your eligible amount and rates.</div>
-      </div>
     </div>
 
     <div class="ltabs">
@@ -437,6 +463,11 @@ src="https://www.facebook.com/tr?id=2041090346480777&ev=PageView&noscript=1"
 
       <div id="docUploadList" style="display:flex;flex-direction:column;gap:12px;margin-bottom:1.1rem"></div>
 
+      <label class="consent-row">
+        <input type="checkbox" id="fdocconsent">
+        <span>I confirm that I am uploading these documents myself, that they belong to me, and that the information in them is true and accurate.</span>
+      </label>
+
       <p style="font-size:12px;color:var(--mu);text-align:center;margin:10px 0">You'll be connected to <strong>StarkLoan's official WhatsApp support</strong> (+91 70731 77874) to continue securely — you can also send documents there if you skip this step.</p>
       <div style="display:flex;gap:10px">
         <button class="abtn" type="button" style="background:#fff;color:var(--tx);border:1.5px solid var(--bdr);flex:0 0 auto;width:auto;padding:0 18px" onclick="backToStep2()"><svg class="icon"><use href="#icon-arrow-left"/></svg></button>
@@ -499,18 +530,18 @@ src="https://www.facebook.com/tr?id=2041090346480777&ev=PageView&noscript=1"
 <div class="ctaban">
   <h2>Ready to explore your finance options?</h2>
   <p>Get started — it takes 2 minutes, and our team will reach out to guide you.</p>
-  <button class="btnw" onclick="goToApply('bottom_cta')"><svg class="icon"><use href="#icon-arrow-right"/></svg> Check Eligibility</button>
+  <button class="btnw" onclick="goToApply('bottom_cta')"><svg class="icon"><use href="#icon-arrow-right"/></svg> Apply Now</button>
 </div>
 
 <footer>
   <div class="finn">
     <div>
       <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
-        <div class="nicon"><svg class="icon"><use href="#icon-trending-up"/></svg></div>
+        <div class="nicon"><img src="logo.png" alt="StarkLoan logo" style="width:22px;height:22px;object-fit:contain"></div>
         <div><div style="font-family:var(--font-display);font-size:17px;font-weight:700;letter-spacing:-.02em">StarkLoan</div><div style="font-size:11px;opacity:.5">Financial Consultant</div></div>
       </div>
       <p style="font-size:13px;opacity:.55;margin-top:8px;line-height:1.7;max-width:280px">StarkLoan is a financial consulting and facilitation platform partnering with RBI-regulated banks &amp; NBFCs. We are not a bank, NBFC, or direct lending institution — we do not sanction or disburse funds ourselves.</p>
-      <p style="font-size:12px;opacity:.4;margin-top:10px;max-width:280px">Registered address: Durga Nursery Road, Mangalam Fun Square, Udaipur, Rajasthan – 313001 · DSA ID: [Add registration no.]</p>
+      <p style="font-size:12px;opacity:.4;margin-top:10px;max-width:280px">Registered address: Durga Nursery Road, Mangalam Fun Square, Udaipur, Rajasthan – 313001 · DSA ID (CP Code): SQYCS/CP/421883</p>
     </div>
     <div class="fcol">
       <h5>Finance Options</h5>
