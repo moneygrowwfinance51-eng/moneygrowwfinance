@@ -138,6 +138,8 @@ function resetApplyForm(){
   document.getElementById('fexist').value='No existing loan';
   const consentEl=document.getElementById('fconsent');
   if(consentEl)consentEl.checked=false;
+  const docConsentEl=document.getElementById('fdocconsent');
+  if(docConsentEl)docConsentEl.checked=false;
   docFiles={};
   currentLeadId=null;
   docUploadEventFired=false;
@@ -445,6 +447,14 @@ async function submitLead(){
   if(filesConverting>0){toast('Please wait — still processing your document(s)...','err');return}
 
   const hasFiles=Object.keys(docFiles).length>0;
+
+  if(hasFiles){
+    const docConsentEl=document.getElementById('fdocconsent');
+    if(docConsentEl && !docConsentEl.checked){
+      toast('Please confirm the document upload declaration to continue','err');
+      return;
+    }
+  }
 
   const leads=getLeads();
   const lead={
