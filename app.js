@@ -13,35 +13,13 @@ const GSHEET_URL = 'https://script.google.com/macros/s/AKfycbw2wtzpfWgahjn_n-2XP
 // source, so it is not a substitute for real authentication.
 const API_SECRET = 'CHANGE_THIS_TO_A_RANDOM_STRING_1234';
 
-// reCAPTCHA v3 — invisible, no checkbox. Runs in the background and scores
-// each submission 0.0 (bot) to 1.0 (human). The site key is public by
-// design (it's in the page source). The secret key that actually verifies
-// scores lives ONLY in Apps Script — never put it here.
-const RECAPTCHA_SITE_KEY = '6Lemo00tAAAAAH1sIi3b96lowQTietm_tSp1p4VY';
-
-// Resolves a fresh token for a given action name, or null if reCAPTCHA
-// hasn't loaded (e.g. blocked by an ad-blocker) — callers treat null as
-// "send anyway, let the backend decide" rather than blocking the user.
-function getRecaptchaToken(action){
-  return new Promise((resolve)=>{
-    if(typeof grecaptcha==='undefined'||!grecaptcha.execute){resolve(null);return}
-    try{
-      grecaptcha.ready(()=>{
-        grecaptcha.execute(RECAPTCHA_SITE_KEY,{action:action})
-          .then(token=>resolve(token))
-          .catch(()=>resolve(null));
-      });
-    }catch(err){resolve(null)}
-  });
-}
-
-function sendToSheet(lead,recaptchaToken){
+function sendToSheet(lead){
   if(!GSHEET_URL || GSHEET_URL.indexOf('PASTE_')===0) return Promise.resolve();
   return fetch(GSHEET_URL,{
     method:'POST',
     mode:'no-cors',
     headers:{'Content-Type':'text/plain'},
-    body:JSON.stringify({action:'createLead',lead:lead,secret:API_SECRET,recaptchaToken:recaptchaToken||null})
+    body:JSON.stringify({action:'createLead',lead:lead,secret:API_SECRET})
   }).catch(()=>{});
 }
 function uploadFileToDrive(rowId,doc){
@@ -53,7 +31,7 @@ function uploadFileToDrive(rowId,doc){
     body:JSON.stringify({action:'uploadFile',rowId:rowId,fileName:doc.name,fileType:doc.type,fileData:doc.data,label:doc.label,secret:API_SECRET})
   }).catch(()=>{});
 }
-async function createLeadAndGetRowId(lead,recaptchaToken){
+async function createLeadAndGetRowId(lead){
   if(!GSHEET_URL || GSHEET_URL.indexOf('PASTE_')===0) return null;
   try{
     const controller=new AbortController();
@@ -61,7 +39,7 @@ async function createLeadAndGetRowId(lead,recaptchaToken){
     const res=await fetch(GSHEET_URL,{
       method:'POST',
       headers:{'Content-Type':'text/plain'},
-      body:JSON.stringify({action:'createLead',lead:lead,secret:API_SECRET,recaptchaToken:recaptchaToken||null}),
+      body:JSON.stringify({action:'createLead',lead:lead,secret:API_SECRET}),
       signal:controller.signal
     });
     clearTimeout(timeoutId);
@@ -376,15 +354,13 @@ async function handleDocFile(e,key){
 
 let currentLeadId=null;
 
-async function goStep2(){
+function goStep2(){
   const name=document.getElementById('fn').value.trim();
   const phone=document.getElementById('fp').value.trim();
   if(!name){toast('Please enter your full name','err');return}
   if(!/^\d{10}$/.test(phone)){toast('Enter a valid 10-digit phone number','err');return}
   const consentEl=document.getElementById('fconsent');
   if(consentEl && !consentEl.checked){toast('Please agree to the Privacy Policy to continue','err');return}
-
-  const recaptchaToken=await getRecaptchaToken('lead_step1');
 
   const leads=getLeads();
   currentLeadId=Date.now();
@@ -396,7 +372,7 @@ async function goStep2(){
     status:'Partial'
   });
   saveLeads(leads);
-  sendToSheet(leads[0],recaptchaToken);
+  sendToSheet(leads[0]);
   fireEvent('lead_step1',{loan_type:aLT});
 
   document.getElementById('sb2').style.background='var(--g)';
@@ -412,7 +388,7 @@ function backToStep1(){
   document.getElementById('step1').scrollIntoView({behavior:'smooth',block:'start'});
 }
 
-async function goStep3(){
+function goStep3(){
   const amount=document.getElementById('fa').value;
   const emp=document.getElementById('fem').value;
   if(!amount){toast('Please select the loan amount required','err');return}
@@ -436,8 +412,7 @@ async function goStep3(){
   saveLeads(leads);
 
   currentRowId=null;
-  const recaptchaToken=await getRecaptchaToken('lead_step2');
-  rowIdPromise=createLeadAndGetRowId(lead,recaptchaToken);
+  rowIdPromise=createLeadAndGetRowId(lead);
 
   document.getElementById('step2').style.display='none';
   document.getElementById('step3').style.display='';
@@ -499,8 +474,6 @@ async function submitLead(){
   const waURL=buildWAMessage(lead);
   document.getElementById('waContinueBtn').href=waURL;
 
-  const recaptchaToken=await getRecaptchaToken('submit_lead');
-
   // Shared event ID lets Meta de-duplicate the browser Pixel event and the
   // server-side Conversions API event below — both describe the same
   // real-world conversion, so Meta should count it once, not twice.
@@ -523,7 +496,7 @@ async function submitLead(){
     }).catch(()=>{});
   }
 
-  createLeadAndGetRowId(lead,recaptchaToken);
+  createLeadAndGetRowId(lead);
 
   const lastItems=docChunks[docChunkIndex]||[];
 
