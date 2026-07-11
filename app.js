@@ -1,574 +1,228 @@
 // ===================================================================
-// StarkLoan — app.js
-// Core application logic: multi-step form navigation, document upload
-// handling, Google Sheets/Apps Script communication, WhatsApp handoff.
-// Loaded BEFORE pixel-tracking.js — that file's top-level pixel-init
-// code calls getCfg(), which is defined here.
+// StarkLoan Leads — Apps Script v5 (hardened + Meta CAPI)
+// Paste this WHOLE file into Apps Script (replacing everything),
+// Save, then Deploy → Manage deployments → Edit → New version → Deploy
 // ===================================================================
 
-const STORE = 'mg_leads_v1';
-const GSHEET_URL = 'https://script.google.com/macros/s/AKfycbw2wtzpfWgahjn_n-2XP8J_sMqlZD3jx5fIxHEpvR81EZhxzBkFk1lHNU3-JR3dtfflCw/exec';
-// Must match API_SECRET in your Apps Script exactly. This only filters out
-// random bots/scanners — it is visible to anyone who views this page's
-// source, so it is not a substitute for real authentication.
+const FOLDER_NAME = 'StarkLoan - Loan Documents';
+const HEADERS = ['Timestamp','Name','Phone','Loan Type','Amount','Employment','Income','City','Existing Loan','Status','Documents'];
+
+// Shared secret — this is NOT strong security (anyone who views your
+// site's page source can read it), but it filters out random bots and
+// scanners that try posting to Apps Script URLs blindly. Change this
+// to your own random string, and update the matching value in your
+// site's index.html (search for API_SECRET there).
 const API_SECRET = 'CHANGE_THIS_TO_A_RANDOM_STRING_1234';
 
-// reCAPTCHA v3 — invisible, no checkbox. Runs in the background and scores
-// each submission 0.0 (bot) to 1.0 (human). The site key is public by
-// design (it's in the page source). The secret key that actually verifies
-// scores lives ONLY in Apps Script — never put it here.
-const RECAPTCHA_SITE_KEY = '6Lemo00tAAAAAH1sIi3b96lowQTietm_tSp1p4VY';
+// Hard server-side limits — these matter because a client-side check
+// (like the 5MB limit in your browser JS) can always be bypassed by
+// anyone who calls this URL directly, skipping your website entirely.
+const MAX_FILE_BYTES = 5 * 1024 * 1024; // 5MB
+const ALLOWED_FILE_TYPES = ['image/jpeg','image/png','image/webp','application/pdf'];
+const MAX_FIELD_LEN = 200;
 
-// Resolves a fresh token for a given action name, or null if reCAPTCHA
-// hasn't loaded (e.g. blocked by an ad-blocker) — callers treat null as
-// "send anyway, let the backend decide" rather than blocking the user.
-function getRecaptchaToken(action){
-  return new Promise((resolve)=>{
-    if(typeof grecaptcha==='undefined'||!grecaptcha.execute){resolve(null);return}
-    try{
-      grecaptcha.ready(()=>{
-        grecaptcha.execute(RECAPTCHA_SITE_KEY,{action:action})
-          .then(token=>resolve(token))
-          .catch(()=>resolve(null));
-      });
-    }catch(err){resolve(null)}
-  });
+function getSheet_() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sheet = ss.getSheets()[0];
+  if (sheet.getLastRow() === 0) sheet.appendRow(HEADERS);
+  return sheet;
 }
 
-function sendToSheet(lead,recaptchaToken){
-  if(!GSHEET_URL || GSHEET_URL.indexOf('PASTE_')===0) return Promise.resolve();
-  return fetch(GSHEET_URL,{
-    method:'POST',
-    mode:'no-cors',
-    headers:{'Content-Type':'text/plain'},
-    body:JSON.stringify({action:'createLead',lead:lead,secret:API_SECRET,recaptchaToken:recaptchaToken||null})
-  }).catch(()=>{});
-}
-function uploadFileToDrive(rowId,doc){
-  if(!GSHEET_URL || GSHEET_URL.indexOf('PASTE_')===0) return Promise.resolve();
-  return fetch(GSHEET_URL,{
-    method:'POST',
-    mode:'no-cors',
-    headers:{'Content-Type':'text/plain'},
-    body:JSON.stringify({action:'uploadFile',rowId:rowId,fileName:doc.name,fileType:doc.type,fileData:doc.data,label:doc.label,secret:API_SECRET})
-  }).catch(()=>{});
-}
-async function createLeadAndGetRowId(lead,recaptchaToken){
-  if(!GSHEET_URL || GSHEET_URL.indexOf('PASTE_')===0) return null;
-  try{
-    const controller=new AbortController();
-    const timeoutId=setTimeout(()=>controller.abort(),15000);
-    const res=await fetch(GSHEET_URL,{
-      method:'POST',
-      headers:{'Content-Type':'text/plain'},
-      body:JSON.stringify({action:'createLead',lead:lead,secret:API_SECRET,recaptchaToken:recaptchaToken||null}),
-      signal:controller.signal
-    });
-    clearTimeout(timeoutId);
-    const json=await res.json();
-    return json.rowId||null;
-  }catch(err){return null}
-}
-const CFG_STORE = 'mg_site_v1';
-
-function getCfg(){try{return JSON.parse(localStorage.getItem(CFG_STORE)||'{}')}catch{return{}}}
-function getLeads(){try{return JSON.parse(localStorage.getItem(STORE)||'[]')}catch{return[]}}
-function saveLeads(l){localStorage.setItem(STORE,JSON.stringify(l))}
-function toggleMenu(){
-  const m=document.getElementById('nlinks');
-  const icon=document.getElementById('nburgerIcon');
-  const open=m.classList.toggle('open');
-  icon.setAttribute('href','#icon-'+(open?'x':'menu-2'));
-}
-function closeMenu(){
-  const m=document.getElementById('nlinks');
-  const icon=document.getElementById('nburgerIcon');
-  m.classList.remove('open');
-  icon.setAttribute('href','#icon-menu-2');
+function getFolder_() {
+  const it = DriveApp.getFoldersByName(FOLDER_NAME);
+  return it.hasNext() ? it.next() : DriveApp.createFolder(FOLDER_NAME);
 }
 
-function toast(msg,type='ok'){
-  const t=document.getElementById('toast');
-  t.innerHTML='<svg class="icon"><use href="#icon-'+(type==='ok'?'check':type==='err'?'alert-circle':'brand-whatsapp')+'"/></svg>'+msg;
-  t.className=type;t.classList.add('show');
-  setTimeout(()=>t.classList.remove('show'),4000);
+function clip_(val) {
+  if (val === undefined || val === null) return '';
+  return String(val).slice(0, MAX_FIELD_LEN);
 }
 
-// ── APPLICATION MODAL ──
-// The intake form lives inside this modal now. Every "Apply"/"Check
-// Eligibility" button on the page calls goToApply() (pixel-tracking.js),
-// which fires a tracking event and then calls openApplyModal() here.
-function openApplyModal(){
-  document.getElementById('applyModalOverlay').style.display='flex';
-  document.body.style.overflow='hidden';
-}
-function closeApplyModal(){
-  document.getElementById('applyModalOverlay').style.display='none';
-  document.body.style.overflow='';
-}
+// Finds an existing 'Partial' row for this phone, or appends a new row.
+function upsertLeadRow_(lead) {
+  const sheet = getSheet_();
+  const row = [
+    new Date(),
+    clip_(lead.name),
+    clip_(lead.phone),
+    clip_(lead.loanType),
+    clip_(lead.amount),
+    clip_(lead.emp),
+    clip_(lead.income),
+    clip_(lead.city),
+    clip_(lead.existingLoan),
+    clip_(lead.status),
+    ''
+  ];
 
-// Friendly, non-"loan"-worded labels for on-page display only. The
-// underlying loanType values ('Personal Loan', 'Business Loan', etc.)
-// are left exactly as-is everywhere else — Google Sheet columns, the
-// WhatsApp message body, and all tracking/value-calculation lookups in
-// pixel-tracking.js key off these exact strings, so renaming them there
-// would silently break the backend. This map only affects what a visitor
-// sees rendered on screen.
-const LOAN_TYPE_DISPLAY={
-  'Personal Loan':'Personal Finance',
-  'Business Loan':'Business Finance',
-  'Home Loan':'Home Finance',
-  'Loan Against Property':'Property-Backed Finance'
-};
-function displayLoanType(lt){
-  return LOAN_TYPE_DISPLAY[lt]||lt;
-}
-
-let aLT='Personal Loan';
-function selTab(k){
-  const m={'home':'Home Loan','lap':'Loan Against Property','personal':'Personal Loan','business':'Business Loan'};
-  const newType=m[k]||k;
-
-  if(newType===aLT){
-    document.getElementById('apply').scrollIntoView({behavior:'smooth'});
-    return;
-  }
-
-  const hasData=document.getElementById('fn').value.trim()||document.getElementById('fp').value.trim()||
-    document.getElementById('fa').value||document.getElementById('fem').value||Object.keys(docFiles).length>0;
-  if(hasData){
-    const ok=confirm('Switching to '+newType+' will start a fresh form and clear what you\'ve entered so far. Continue?');
-    if(!ok)return;
-  }
-
-  aLT=newType;
-  document.querySelectorAll('.ltab').forEach(t=>t.classList.remove('active'));
-  const el=document.getElementById('tab-'+k);
-  if(el)el.classList.add('active');
-  resetApplyForm();
-  document.getElementById('apply').scrollIntoView({behavior:'smooth'});
-  fireEvent('select_loan_type',{loan_type:aLT});
-}
-
-function resetApplyForm(){
-  document.getElementById('fn').value='';
-  document.getElementById('fp').value='';
-  document.getElementById('fa').value='';
-  document.getElementById('fem').value='';
-  document.getElementById('fi').value='';
-  document.getElementById('fc').value='';
-  document.getElementById('fexist').value='No existing loan';
-  const consentEl=document.getElementById('fconsent');
-  if(consentEl)consentEl.checked=false;
-  const docConsentEl=document.getElementById('fdocconsent');
-  if(docConsentEl)docConsentEl.checked=false;
-  docFiles={};
-  currentLeadId=null;
-  docUploadEventFired=false;
-  document.getElementById('sb2').style.background='var(--bdr)';
-  document.getElementById('step2').style.display='none';
-  document.getElementById('step3').style.display='none';
-  document.getElementById('step3form').style.display='';
-  document.getElementById('step3engage').style.display='none';
-  document.getElementById('step3success').style.display='none';
-  docChunkIndex=0;currentRowId=null;rowIdPromise=null;
-  const btn=document.getElementById('docNextBtn');
-  btn.disabled=false;
-  btn.innerHTML='Next <svg class="icon"><use href="#icon-arrow-right"/></svg>';
-  document.getElementById('step1').style.display='';
-}
-
-function startOver(){
-  const ok=confirm('This will clear everything you\'ve entered and start the form over. Continue?');
-  if(!ok)return;
-  resetApplyForm();
-  document.getElementById('apply').scrollIntoView({behavior:'smooth',block:'start'});
-}
-
-function onPhoneInput(){
-  const el=document.getElementById('fp');
-  el.value=el.value.replace(/\D/g,'').slice(0,10);
-}
-
-function buildWAMessage(lead){
-  const cfg=getCfg();
-  const waNum=(cfg.waNumber||'917073177874').replace(/[^0-9]/g,'');
-  const typeKeyword=lead.loanType.replace(/\s+/g,'');
-  const msg=`Hello! I want to apply for a loan. [Ref: ApplyLoan_${typeKeyword}]
-
-👤 Name: ${lead.name}
-📞 Phone: ${lead.phone}
-💰 Loan Type: ${lead.loanType}
-📉 Amount: ${lead.amount}
-💼 Employment: ${lead.emp}
-🏦 Existing Loan: ${lead.existingLoan}
-🏙 City: ${lead.city||'—'}
-
-Please confirm my application and let me know the next steps. Thank you!`;
-  return 'https://wa.me/'+waNum+'?text='+encodeURIComponent(msg);
-}
-
-function livePreview(){}
-
-let docFiles={};
-const MAX_FILE_MB=5;
-
-const DOC_REQUIREMENTS={
-  'Salaried':[
-    {key:'aadhaar',label:'Aadhaar Card'},
-    {key:'pan',label:'PAN Card'},
-    {key:'salaryslip',label:'Salary Slip (Last 3 Months)'},
-    {key:'form16',label:'Form 16'},
-    {key:'bankstatement',label:'Bank Statement (Last 6 Months)'},
-    {key:'photo',label:'Passport Size Photo'}
-  ],
-  'Business':[
-    {key:'aadhaar',label:'Aadhaar Card'},
-    {key:'pan',label:'PAN Card'},
-    {key:'itr',label:'ITR (Last 2 Years)'},
-    {key:'bizreg',label:'Firm Registration (Udyam / GST / BRN / Shop Act License)'},
-    {key:'bankstatement',label:'Bank Statement (Last 6 Months)'},
-    {key:'photo',label:'Passport Size Photo'}
-  ]
-};
-
-function empCategory(){
-  const emp=document.getElementById('fem').value;
-  return emp==='Salaried' ? 'Salaried' : 'Business';
-}
-
-function docRow(it){
-  return `
-    <div class="docrow" data-key="${it.key}">
-      <div class="docrow-label"><svg class="icon"><use href="#icon-file-text"/></svg> ${it.label}</div>
-      <label class="docrow-btn" for="docup_${it.key}"><svg class="icon"><use href="#icon-upload"/></svg> Upload</label>
-      <input type="file" id="docup_${it.key}" accept="image/*,application/pdf" style="display:none" onchange="handleDocFile(event,'${it.key}')">
-      <div id="docrow-status-${it.key}" class="docrow-status"></div>
-    </div>`;
-}
-
-function chunkArray(arr,size){
-  const out=[];
-  for(let i=0;i<arr.length;i+=size)out.push(arr.slice(i,i+size));
-  return out;
-}
-
-let docChunks=[];
-let docChunkIndex=0;
-let currentRowId=null;
-let rowIdPromise=null;
-
-function getRowId(){
-  if(currentRowId)return Promise.resolve(currentRowId);
-  if(rowIdPromise)return rowIdPromise.then(id=>{currentRowId=id;return id});
-  return Promise.resolve(null);
-}
-
-function renderDocRequirements(){
-  const cat=empCategory();
-  document.getElementById('docLoanType').textContent=displayLoanType(aLT);
-  docChunks=chunkArray(DOC_REQUIREMENTS[cat],3);
-  docChunkIndex=0;
-  renderDocChunk();
-}
-
-function renderDocChunk(){
-  const items=docChunks[docChunkIndex]||[];
-  const isLast=docChunkIndex===docChunks.length-1;
-  const container=document.getElementById('docUploadList');
-  container.innerHTML=
-    `<p style="font-size:11.5px;font-weight:700;color:var(--mu);text-transform:uppercase;letter-spacing:.5px;margin-bottom:2px">Step ${docChunkIndex+1} of ${docChunks.length}</p>`
-    + items.map(docRow).join('');
-  items.forEach(it=>renderDocStatus(it.key));
-
-  const nextBtn=document.getElementById('docNextBtn');
-  nextBtn.innerHTML=isLast
-    ? '<svg class="icon"><use href="#icon-brand-whatsapp"/></svg> Submit Application'
-    : 'Next <svg class="icon"><use href="#icon-arrow-right"/></svg>';
-  nextBtn.onclick=isLast?submitLead:docChunkNext;
-}
-
-function docChunkNext(){
-  const items=docChunks[docChunkIndex]||[];
-  getRowId().then(rowId=>{
-    if(!rowId)return;
-    items.forEach(it=>{
-      const f=docFiles[it.key];
-      if(f && !f.uploaded){
-        f.uploaded=true;
-        uploadFileToDrive(rowId,f);
-        trackDocUpload();
+  let targetRow = -1;
+  if (lead.phone) {
+    const data = sheet.getDataRange().getValues();
+    for (let i = data.length - 1; i >= 1; i--) {
+      if (String(data[i][2]) === String(lead.phone) && data[i][9] === 'Partial') {
+        targetRow = i + 1;
+        break;
       }
-    });
-  });
-  docChunkIndex++;
-  renderDocChunk();
-  document.getElementById('step3').scrollIntoView({behavior:'smooth',block:'start'});
-}
-
-function renderDocStatus(key){
-  const el=document.getElementById('docrow-status-'+key);
-  if(!el)return;
-  const f=docFiles[key];
-  if(!f){el.innerHTML='';el.classList.remove('filled');return}
-  el.classList.add('filled');
-  el.innerHTML=`<span><svg class="icon"><use href="#icon-circle-check"/></svg> ${f.name} (${(f.size/1024/1024).toFixed(1)}MB)</span><span class="docrow-rm" onclick="removeDocFile('${key}')">✕</span>`;
-}
-
-function removeDocFile(key){
-  delete docFiles[key];
-  renderDocStatus(key);
-  const input=document.getElementById('docup_'+key);
-  if(input)input.value='';
-}
-
-function fileToBase64(file){
-  return new Promise((resolve,reject)=>{
-    const r=new FileReader();
-    r.onload=()=>resolve(r.result.split(',')[1]);
-    r.onerror=reject;
-    r.readAsDataURL(file);
-  });
-}
-
-let filesConverting=0;
-
-async function handleDocFile(e,key){
-  const file=e.target.files[0];
-  e.target.value='';
-  if(!file)return;
-
-  const items=DOC_REQUIREMENTS[empCategory()];
-  const label=(items.find(it=>it.key===key)||{}).label||key;
-
-  if(file.size>MAX_FILE_MB*1024*1024){
-    toast(label+' file is over '+MAX_FILE_MB+'MB — please choose a smaller file','err');
-    return;
-  }
-
-  const statusEl=document.getElementById('docrow-status-'+key);
-  if(statusEl){
-    statusEl.classList.remove('filled');
-    statusEl.innerHTML='<span><svg class="icon" style="animation:spin 1s linear infinite;display:inline-block"><use href="#icon-loader"/></svg> Processing '+file.name+'...</span>';
-  }
-  filesConverting++;
-
-  try{
-    const base64=await fileToBase64(file);
-    const docObj={label,name:file.name,type:file.type,size:file.size,data:base64,uploaded:false};
-    docFiles[key]=docObj;
-    renderDocStatus(key);
-
-    getRowId().then(rowId=>{
-      if(rowId){
-        docObj.uploaded=true;
-        uploadFileToDrive(rowId,docObj);
-        trackDocUpload();
-      }
-    });
-  }catch(err){
-    toast('Could not read the file for '+label,'err');
-    if(statusEl)statusEl.innerHTML='';
-  }finally{
-    filesConverting--;
-  }
-}
-
-let currentLeadId=null;
-
-async function goStep2(){
-  const name=document.getElementById('fn').value.trim();
-  const phone=document.getElementById('fp').value.trim();
-  if(!name){toast('Please enter your full name','err');return}
-  if(!/^\d{10}$/.test(phone)){toast('Enter a valid 10-digit phone number','err');return}
-  const consentEl=document.getElementById('fconsent');
-  if(consentEl && !consentEl.checked){toast('Please agree to the Privacy Policy to continue','err');return}
-
-  const recaptchaToken=await getRecaptchaToken('lead_step1');
-
-  const leads=getLeads();
-  currentLeadId=Date.now();
-  leads.unshift({
-    id:currentLeadId,name,phone,
-    loanType:aLT,amount:'',emp:'',income:'',city:'',existingLoan:'',
-    date:new Date().toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'}),
-    dateRaw:new Date().toISOString(),
-    status:'Partial'
-  });
-  saveLeads(leads);
-  sendToSheet(leads[0],recaptchaToken);
-  fireEvent('lead_step1',{loan_type:aLT});
-
-  document.getElementById('sb2').style.background='var(--g)';
-  document.getElementById('step1').style.display='none';
-  document.getElementById('step2').style.display='';
-  document.getElementById('step2').scrollIntoView({behavior:'smooth',block:'start'});
-}
-
-function backToStep1(){
-  document.getElementById('sb2').style.background='var(--bdr)';
-  document.getElementById('step2').style.display='none';
-  document.getElementById('step1').style.display='';
-  document.getElementById('step1').scrollIntoView({behavior:'smooth',block:'start'});
-}
-
-async function goStep3(){
-  const amount=document.getElementById('fa').value;
-  const emp=document.getElementById('fem').value;
-  if(!amount){toast('Please select the loan amount required','err');return}
-  if(!emp){toast('Please select your employment type','err');return}
-
-  const leads=getLeads();
-  const lead={
-    id:currentLeadId,
-    name:document.getElementById('fn').value.trim(),
-    phone:document.getElementById('fp').value.trim(),
-    city:document.getElementById('fc').value.trim(),
-    loanType:aLT,amount,emp,
-    income:document.getElementById('fi').value,
-    existingLoan:document.getElementById('fexist').value,
-    date:new Date().toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'}),
-    dateRaw:new Date().toISOString(),
-    status:'Partial'
-  };
-  const idx=leads.findIndex(l=>l.id===currentLeadId);
-  if(idx>-1){leads[idx]=lead}else{leads.unshift(lead)}
-  saveLeads(leads);
-
-  currentRowId=null;
-  const recaptchaToken=await getRecaptchaToken('lead_step2');
-  rowIdPromise=createLeadAndGetRowId(lead,recaptchaToken);
-
-  document.getElementById('step2').style.display='none';
-  document.getElementById('step3').style.display='';
-  renderDocRequirements();
-  document.getElementById('step3').scrollIntoView({behavior:'smooth',block:'start'});
-}
-
-function backToStep2(){
-  document.getElementById('step3').style.display='none';
-  document.getElementById('step2').style.display='';
-  document.getElementById('step2').scrollIntoView({behavior:'smooth',block:'start'});
-}
-
-function engageAnswered(btn,val){
-  document.querySelectorAll('#engageOpts .ltab').forEach(b=>b.classList.remove('active'));
-  btn.classList.add('active');
-  window._engageAnswer=val;
-}
-
-function setEngageProgress(pct,text){
-  const bar=document.getElementById('engageProgressBar');
-  const txt=document.getElementById('engageProgressText');
-  if(bar)bar.style.width=Math.max(8,Math.min(100,pct))+'%';
-  if(txt && text)txt.textContent=text;
-}
-
-async function submitLead(){
-  const name=document.getElementById('fn').value.trim();
-  const phone=document.getElementById('fp').value.trim();
-  const amount=document.getElementById('fa').value;
-  const emp=document.getElementById('fem').value;
-  if(filesConverting>0){toast('Please wait — still processing your document(s)...','err');return}
-
-  const hasFiles=Object.keys(docFiles).length>0;
-
-  if(hasFiles){
-    const docConsentEl=document.getElementById('fdocconsent');
-    if(docConsentEl && !docConsentEl.checked){
-      toast('Please confirm the document upload declaration to continue','err');
-      return;
     }
   }
 
-  const leads=getLeads();
-  const lead={
-    id:currentLeadId||Date.now(),name,phone,
-    city:document.getElementById('fc').value.trim(),
-    loanType:aLT,amount,emp,
-    income:document.getElementById('fi').value,
-    existingLoan:document.getElementById('fexist').value,
-    date:new Date().toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'}),
-    dateRaw:new Date().toISOString(),
-    status:'New'
-  };
-  const idx=leads.findIndex(l=>l.id===currentLeadId);
-  if(idx>-1){leads[idx]=lead}else{leads.unshift(lead)}
-  saveLeads(leads);
-
-  const waURL=buildWAMessage(lead);
-  document.getElementById('waContinueBtn').href=waURL;
-
-  const recaptchaToken=await getRecaptchaToken('submit_lead');
-
-  // Shared event ID lets Meta de-duplicate the browser Pixel event and the
-  // server-side Conversions API event below — both describe the same
-  // real-world conversion, so Meta should count it once, not twice.
-  const capiEventId='lead_'+lead.id;
-
-  const LEAD_VALUE=calcLeadValue(aLT,amount);
-
-  if(typeof fbq==='function') fbq('track','Lead',{loan_type:aLT,currency:'INR',value:LEAD_VALUE},{eventID:capiEventId});
-  fireEvent('generate_lead',{currency:'INR',loan_type:aLT,value:LEAD_VALUE});
-
-  // Send the matching server-side event via Apps Script — NOT directly to
-  // Meta from the browser. This keeps your CAPI access token out of the
-  // page entirely (it lives only in Apps Script's Script Properties).
-  if(GSHEET_URL && GSHEET_URL.indexOf('PASTE_')!==0){
-    fetch(GSHEET_URL,{
-      method:'POST',
-      mode:'no-cors',
-      headers:{'Content-Type':'text/plain'},
-      body:JSON.stringify({action:'sendCAPI',eventName:'Lead',eventId:capiEventId,name:name,phone:phone,loanType:aLT,value:LEAD_VALUE,secret:API_SECRET})
-    }).catch(()=>{});
+  if (targetRow > 0) {
+    const existingDocs = sheet.getRange(targetRow, 11).getValue();
+    sheet.getRange(targetRow, 1, 1, row.length).setValues([row]);
+    if (existingDocs) sheet.getRange(targetRow, 11).setValue(existingDocs);
+  } else {
+    sheet.appendRow(row);
+    targetRow = sheet.getLastRow();
   }
+  return targetRow;
+}
 
-  createLeadAndGetRowId(lead,recaptchaToken);
-
-  const lastItems=docChunks[docChunkIndex]||[];
-
-  if(!hasFiles){
-    document.getElementById('step3successMsg').textContent='Your details are saved. Redirecting you to WhatsApp…';
-    document.getElementById('step3form').style.display='none';
-    document.getElementById('step3success').style.display='';
-    toast('Application submitted!','ok');
-    setTimeout(()=>{ window.location.href=waURL; },1200);
-    return;
+// Safely appends a document link, locked so parallel requests
+// writing to the same row never overwrite each other.
+function appendDocLink_(rowId, label, url) {
+  const lock = LockService.getScriptLock();
+  lock.waitLock(15000);
+  try {
+    const sheet = getSheet_();
+    const range = sheet.getRange(rowId, 11);
+    const current = range.getValue();
+    range.setValue(current ? current + '\n' + label + ': ' + url : label + ': ' + url);
+  } finally {
+    lock.releaseLock();
   }
+}
 
-  document.getElementById('step3form').style.display='none';
-  document.getElementById('step3engage').style.display='';
-  document.getElementById('step3engage').scrollIntoView({behavior:'smooth',block:'start'});
-  setEngageProgress(15,'Uploading your documents securely…');
+function doPost(e) {
+  try {
+    const data = JSON.parse(e.postData.contents);
 
-  const rowId=await getRowId();
-  let uploadPromises=[];
-  if(rowId){
-    lastItems.forEach(it=>{
-      const f=docFiles[it.key];
-      if(f && !f.uploaded){
-        f.uploaded=true;
-        uploadPromises.push(uploadFileToDrive(rowId,f));
-        trackDocUpload();
+    // Basic gate — rejects requests that don't carry the shared secret.
+    // Again: a determined attacker can extract this from your page
+    // source, so treat this as spam reduction, not real security.
+    if (data.secret !== API_SECRET) {
+      return ContentService.createTextOutput(JSON.stringify({status:'error', message:'Unauthorized'}))
+        .setMimeType(ContentService.MimeType.JSON);
+    }
+
+    // ACTION 1 — save/update the lead's text fields, return the row number
+    if (data.action === 'createLead') {
+      const rowId = upsertLeadRow_(data.lead || {});
+      return ContentService.createTextOutput(JSON.stringify({status:'success', rowId}))
+        .setMimeType(ContentService.MimeType.JSON);
+    }
+
+    // ACTION 2 — handle ONE file (called many times in parallel from the site)
+    if (data.action === 'uploadFile') {
+      if (!data.rowId || !data.fileData) {
+        return ContentService.createTextOutput(JSON.stringify({status:'error', message:'Missing rowId or fileData'}))
+          .setMimeType(ContentService.MimeType.JSON);
       }
-    });
+
+      const fileType = data.fileType || 'application/octet-stream';
+      if (ALLOWED_FILE_TYPES.indexOf(fileType) === -1) {
+        return ContentService.createTextOutput(JSON.stringify({status:'error', message:'File type not allowed'}))
+          .setMimeType(ContentService.MimeType.JSON);
+      }
+
+      const bytes = Utilities.base64Decode(data.fileData);
+      if (bytes.length > MAX_FILE_BYTES) {
+        return ContentService.createTextOutput(JSON.stringify({status:'error', message:'File exceeds 5MB limit'}))
+          .setMimeType(ContentService.MimeType.JSON);
+      }
+
+      const folder = getFolder_();
+      const blob = Utilities.newBlob(bytes, fileType, clip_(data.fileName) || 'document');
+      const file = folder.createFile(blob);
+      file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+      appendDocLink_(data.rowId, clip_(data.label) || 'Document', file.getUrl());
+      return ContentService.createTextOutput(JSON.stringify({status:'success'}))
+        .setMimeType(ContentService.MimeType.JSON);
+    }
+
+    // ACTION 3 — forward a conversion event (Lead or Lead_DocUpload) to
+    // Meta's Conversions API from the SERVER side. Your Meta access token
+    // lives only in this script's Script Properties (Project Settings →
+    // Script Properties) — it is never sent to or visible from the
+    // browser/website. data.eventName selects which event fires; the
+    // event_id must match the one sent client-side via fbq(..., {eventID})
+    // for Meta to deduplicate the browser and server copies of the same event.
+    if (data.action === 'sendCAPI') {
+      sendMetaCAPI_(data);
+      return ContentService.createTextOutput(JSON.stringify({status:'success'}))
+        .setMimeType(ContentService.MimeType.JSON);
+    }
+
+    return ContentService.createTextOutput(JSON.stringify({status:'error', message:'Unknown action'}))
+      .setMimeType(ContentService.MimeType.JSON);
+
+  } catch (err) {
+    return ContentService.createTextOutput(JSON.stringify({status:'error', message: err.message}))
+      .setMimeType(ContentService.MimeType.JSON);
   }
+}
 
-  setEngageProgress(55,'Almost done…');
+// Hashes a value with SHA-256 as hex, lowercase — the format Meta's
+// Conversions API requires for personal data like phone/name.
+function sha256Hex_(value) {
+  const normalized = String(value || '').trim().toLowerCase();
+  const digest = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, normalized, Utilities.Charset.UTF_8);
+  return digest.map(b => ('0' + (b & 0xFF).toString(16)).slice(-2)).join('');
+}
 
-  const minWait=new Promise(res=>setTimeout(res,3000));
-  const maxWait=new Promise(res=>setTimeout(res,8000));
-  const uploadsDone=uploadPromises.length?Promise.allSettled(uploadPromises):Promise.resolve();
+// Sends one conversion event to Meta's Conversions API — used for both
+// the initial 'Lead' event (form submit) and the 'Lead_DocUpload' event
+// (each document upload), selected via data.eventName. Failures here are
+// logged but never break the lead-saving flow above — losing an ad
+// tracking event is much less costly than losing a real applicant's data.
+function sendMetaCAPI_(data) {
+  const props = PropertiesService.getScriptProperties();
+  const pixelId = props.getProperty('META_PIXEL_ID');
+  const accessToken = props.getProperty('META_ACCESS_TOKEN');
+  if (!pixelId || !accessToken) return; // CAPI not configured yet — skip silently
 
-  await Promise.race([
-    Promise.all([minWait,uploadsDone]).then(()=>setEngageProgress(100,'All set!')),
-    maxWait.then(()=>setEngageProgress(100,'All set!'))
-  ]);
+  // Indian mobile numbers need the country code for Meta's matching to work
+  const rawPhone = String(data.phone || '').replace(/\D/g, '');
+  const phoneForHash = rawPhone.length === 10 ? '91' + rawPhone : rawPhone;
 
-  document.getElementById('step3engage').style.display='none';
-  document.getElementById('step3successMsg').textContent='Your details and documents are saved. Redirecting you to WhatsApp…';
-  document.getElementById('step3success').style.display='';
-  toast('Application submitted!','ok');
+  // Defaults to 'Lead' so older calls to this action (without eventName)
+  // keep working exactly as before.
+  const eventName = clip_(data.eventName) || 'Lead';
 
-  window.location.href=waURL;
+  const payload = {
+    data: [{
+      event_name: eventName,
+      event_time: Math.floor(Date.now() / 1000),
+      event_id: clip_(data.eventId),
+      action_source: 'website',
+      user_data: {
+        ph: [sha256Hex_(phoneForHash)],
+        fn: [sha256Hex_(data.name)]
+      },
+      custom_data: {
+        loan_type: clip_(data.loanType),
+        currency: 'INR',
+        value: Number(data.value) || 0
+      }
+    }]
+  };
+
+  try {
+    UrlFetchApp.fetch(
+      'https://graph.facebook.com/v20.0/' + pixelId + '/events?access_token=' + accessToken,
+      {
+        method: 'post',
+        contentType: 'application/json',
+        payload: JSON.stringify(payload),
+        muteHttpExceptions: true
+      }
+    );
+  } catch (err) {
+    // Swallow errors — a CAPI failure should never surface to the user
+    // or block their application from being saved.
+  }
+}
+
+function doGet(e) {
+  return ContentService.createTextOutput(JSON.stringify({status:'StarkLoan script v5 is live'}))
+    .setMimeType(ContentService.MimeType.JSON);
 }
