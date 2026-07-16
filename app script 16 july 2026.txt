@@ -1,0 +1,208 @@
+// ==========================================
+// StarkLoan / MoneyGroww Leads — CORE SAVE (leads + documents only)
+// Paste this WHOLE file in, replacing everything.
+// Then: Deploy → Manage deployments → pencil icon → New version → Deploy
+// ==========================================
+
+// This MUST match API_SECRET in your website's app.js, character-for-character
+const API_SECRET = 'CHANGE_THIS_TO_A_RANDOM_STRING_1234';
+
+const FOLDER_NAME = 'StarkLoan - Loan Documents';
+const HEADERS = ['Timestamp','Name','Phone','Loan Type','Amount','Employment','Income','City','Existing Loan','Status','Documents'];
+const MAX_FILE_BYTES = 5 * 1024 * 1024; // 5MB
+const ALLOWED_FILE_TYPES = ['image/jpeg','image/png','image/webp','application/pdf'];
+
+function doPost(e) {
+  try {
+    const data = JSON.parse(e.postData.contents);
+
+    if (!data || data.secret !== API_SECRET) {
+      return ContentService.createTextOutput(JSON.stringify({status:'error', message:'Unauthorized'}))
+        .setMimeType(ContentService.MimeType.JSON);
+    }
+
+    if (data.action === 'createLead') {
+      const rowId = upsertLeadRow_(data.lead || {});
+      return ContentService.createTextOutput(JSON.stringify({status:'success', rowId}))
+        .setMimeType(ContentService.MimeType.JSON);
+    }
+
+    if (data.action === 'uploadFile') {
+      if (!data.rowId || !data.fileData) {
+        return ContentService.createTextOutput(JSON.stringify({status:'error', message:'Missing rowId or fileData'}))
+          .setMimeType(ContentService.MimeType.JSON);
+      }
+
+      const fileType = data.fileType || 'application/octet-stream';
+      if (ALLOWED_FILE_TYPES.indexOf(fileType) === -1) {
+        return ContentService.createTextOutput(JSON.stringify({status:'error', message:'File type not allowed'}))
+          .setMimeType(ContentService.MimeType.JSON);
+      }
+
+      const bytes = Utilities.base64Decode(data.fileData);
+      if (bytes.length > MAX_FILE_BYTES) {
+        return ContentService.createTextOutput(JSON.stringify({status:'error', message:'File exceeds 5MB limit'}))
+          .setMimeType(ContentService.MimeType.JSON);
+      }
+
+      // ACTUALLY upload the file to Drive — this was missing before,
+      // which is why documents weren't saving.
+      const folder = getFolder_();
+      const blob = Utilities.newBlob(bytes, fileType, clip_(data.fileName) || 'document');
+      const file = folder.createFile(blob);
+      file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+
+      appendDocLink_(data.rowId, clip_(data.label) || 'Document', file.getUrl());
+      return ContentService.createTextOutput(JSON.stringify({status:'success'}))
+        .setMimeType(ContentService.MimeType.JSON);
+    }
+
+    if (data.action === 'sendCAPI') {
+      sendMetaCAPI_(data);
+      return ContentService.createTextOutput(JSON.stringify({status:'success'}))
+        .setMimeType(ContentService.MimeType.JSON);
+    }
+
+    return ContentService.createTextOutput(JSON.stringify({status:'error', message:'Unknown action'}))
+      .setMimeType(ContentService.MimeType.JSON);
+
+  } catch (err) {
+    Logger.log('doPost error: ' + err.toString());
+    return ContentService.createTextOutput(JSON.stringify({status:'error', message: err.toString()}))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+}
+
+// Sends one conversion event to Meta's Conversions API. Runs in its own
+// action branch, completely separate from createLead/uploadFile — a
+// problem here can NEVER block or break lead/document saving, and a
+// problem there can never break this either. Also wrapped in its own
+// try/catch so a Meta API hiccup never surfaces as an error to the site.
+function sendMetaCAPI_(data) {
+  try {
+    const props = PropertiesService.getScriptProperties();
+    const pixelId = props.getProperty('META_PIXEL_ID');
+    const accessToken = props.getProperty('META_ACCESS_TOKEN');
+    if (!pixelId || !accessToken) {
+      Logger.log('CAPI skipped — META_PIXEL_ID / META_ACCESS_TOKEN not set in Script Properties');
+      return;
+    }
+
+    const rawPhone = String(data.phone || '').replace(/\D/g, '');
+    const phoneForHash = rawPhone.length === 10 ? '91' + rawPhone : rawPhone;
+    const eventName = clip_(data.eventName) || 'Lead';
+
+    const payload = {
+      data: [{
+        event_name: eventName,
+        event_time: Math.floor(Date.now() / 1000),
+        event_id: clip_(data.eventId),
+        action_source: 'website',
+        user_data: {
+          ph: [sha256Hex_(phoneForHash)],
+          fn: [sha256Hex_(data.name)]
+        },
+        custom_data: {
+          loan_type: clip_(data.loanType),
+          currency: 'INR',
+          value: Number(data.value) || 0
+        }
+      }]
+    };
+
+    UrlFetchApp.fetch(
+      'https://graph.facebook.com/v20.0/' + pixelId + '/events?access_token=' + accessToken,
+      {
+        method: 'post',
+        contentType: 'application/json',
+        payload: JSON.stringify(payload),
+        muteHttpExceptions: true
+      }
+    );
+  } catch (err) {
+    Logger.log('CAPI error (non-fatal): ' + err.toString());
+  }
+}
+
+// Hashes a value with SHA-256 as hex, lowercase — the format Meta's
+// Conversions API requires for personal data like phone/name.
+function sha256Hex_(value) {
+  const normalized = String(value || '').trim().toLowerCase();
+  const digest = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, normalized, Utilities.Charset.UTF_8);
+  return digest.map(b => ('0' + (b & 0xFF).toString(16)).slice(-2)).join('');
+}
+
+// Always the first tab, not whatever tab happened to be open last —
+// getActiveSheet() is unreliable for a script triggered by a web request.
+function getSheet_() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sheet = ss.getSheets()[0];
+  if (sheet.getLastRow() === 0) sheet.appendRow(HEADERS);
+  return sheet;
+}
+
+function getFolder_() {
+  const it = DriveApp.getFoldersByName(FOLDER_NAME);
+  return it.hasNext() ? it.next() : DriveApp.createFolder(FOLDER_NAME);
+}
+
+function upsertLeadRow_(lead) {
+  const sheet = getSheet_();
+  const row = [
+    new Date(),
+    clip_(lead.name),
+    clip_(lead.phone),
+    clip_(lead.loanType),
+    clip_(lead.amount),
+    clip_(lead.emp),
+    clip_(lead.income),
+    clip_(lead.city),
+    clip_(lead.existingLoan),
+    clip_(lead.status || 'New'),
+    ''
+  ];
+
+  let targetRow = -1;
+  if (lead.phone) {
+    const data = sheet.getDataRange().getValues();
+    for (let i = data.length - 1; i >= 1; i--) {
+      if (String(data[i][2]) === String(lead.phone) && data[i][9] === 'Partial') {
+        targetRow = i + 1;
+        break;
+      }
+    }
+  }
+
+  if (targetRow > 0) {
+    const existingDocs = sheet.getRange(targetRow, 11).getValue();
+    sheet.getRange(targetRow, 1, 1, row.length).setValues([row]);
+    if (existingDocs) sheet.getRange(targetRow, 11).setValue(existingDocs);
+  } else {
+    sheet.appendRow(row);
+    targetRow = sheet.getLastRow();
+  }
+  return targetRow;
+}
+
+function appendDocLink_(rowId, label, url) {
+  const lock = LockService.getScriptLock();
+  lock.waitLock(15000);
+  try {
+    const sheet = getSheet_();
+    const range = sheet.getRange(rowId, 11);
+    const current = range.getValue();
+    range.setValue(current ? current + '\n' + label + ': ' + url : label + ': ' + url);
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+function clip_(val) {
+  if (val === undefined || val === null) return '';
+  return String(val).trim().slice(0, 200);
+}
+
+function doGet(e) {
+  return ContentService.createTextOutput(JSON.stringify({status:'StarkLoan core-save script is live'}))
+    .setMimeType(ContentService.MimeType.JSON);
+}
