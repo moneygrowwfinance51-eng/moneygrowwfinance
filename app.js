@@ -52,6 +52,105 @@ const CFG_STORE = 'mg_site_v1';
 function getCfg(){try{return JSON.parse(localStorage.getItem(CFG_STORE)||'{}')}catch{return{}}}
 function getLeads(){try{return JSON.parse(localStorage.getItem(STORE)||'[]')}catch{return[]}}
 function saveLeads(l){localStorage.setItem(STORE,JSON.stringify(l))}
+
+// ── RESUME TOKEN ──
+// Lets a dropped-off user return via a WhatsApp link and land back on the
+// exact step they left off on, instead of retyping name/phone/etc.
+// One token per in-progress application, kept in localStorage so it
+// survives a page reload even before it's in the URL.
+const RESUME_STORE='mg_resume_token';
+
+function getOrCreateResumeToken(){
+  let t=localStorage.getItem(RESUME_STORE);
+  if(!t){
+    t=(crypto.randomUUID?crypto.randomUUID():(Date.now().toString(36)+Math.random().toString(36).slice(2))).replace(/-/g,'').slice(0,16);
+    localStorage.setItem(RESUME_STORE,t);
+  }
+  return t;
+}
+function clearResumeToken(){
+  localStorage.removeItem(RESUME_STORE);
+}
+
+// Puts ?resume=<token> in the address bar without reloading the page, so
+// if the user copies the URL or it's captured for the WhatsApp link, it
+// carries the token. Preserves any other existing query params.
+function putResumeTokenInURL(token){
+  const url=new URL(window.location.href);
+  url.searchParams.set('resume',token);
+  window.history.replaceState(null,'',url.toString());
+}
+
+async function fetchLeadByToken(token){
+  if(!GSHEET_URL || GSHEET_URL.indexOf('PASTE_')===0) return null;
+  try{
+    const controller=new AbortController();
+    const timeoutId=setTimeout(()=>controller.abort(),15000);
+    const res=await fetch(GSHEET_URL,{
+      method:'POST',
+      headers:{'Content-Type':'text/plain'},
+      body:JSON.stringify({action:'getLead',token:token,secret:API_SECRET}),
+      signal:controller.signal
+    });
+    clearTimeout(timeoutId);
+    const json=await res.json();
+    return json.lead||null;
+  }catch(err){return null}
+}
+
+// On page load, checks for ?resume=<token> in the URL. If it matches an
+// in-progress (Partial) lead, pre-fills the form and jumps straight to
+// the step they left off on — never back to name/phone.
+async function checkResumeOnLoad(){
+  const params=new URLSearchParams(window.location.search);
+  const token=params.get('resume');
+  if(!token)return;
+
+  const lead=await fetchLeadByToken(token);
+  if(!lead || (lead.status!=='Partial' && lead.status!=='Docs Invalid'))return;
+
+  localStorage.setItem(RESUME_STORE,token);
+  currentLeadId=lead.rowId?Number(lead.rowId):Date.now();
+  currentRowId=lead.rowId||null;
+
+  if(lead.loanType){
+    aLT=lead.loanType;
+    const tabMap={'Home Loan':'home','Loan Against Property':'lap','Personal Loan':'personal','Business Loan':'business'};
+    const tabKey=tabMap[lead.loanType];
+    if(tabKey){
+      document.querySelectorAll('.ltab').forEach(t=>t.classList.remove('active'));
+      const el=document.getElementById('tab-'+tabKey);
+      if(el)el.classList.add('active');
+    }
+  }
+
+  const setVal=(id,val)=>{const el=document.getElementById(id);if(el&&val)el.value=val;};
+  setVal('fn',lead.name);
+  setVal('fp',lead.phone);
+  setVal('fa',lead.amount);
+  setVal('fem',lead.emp);
+  setVal('fi',lead.income);
+  setVal('fc',lead.city);
+  setVal('fexist',lead.existingLoan);
+
+  openApplyModal();
+  document.getElementById('step1').style.display='none';
+
+  if(lead.lastStep==='step3' || lead.status==='Docs Invalid'){
+    document.getElementById('sb2').style.background='var(--g)';
+    document.getElementById('step2').style.display='none';
+    document.getElementById('step3').style.display='';
+    renderDocRequirements();
+    toast(lead.status==='Docs Invalid' ? 'One document needs to be re-uploaded' : 'Welcome back — pick up where you left off','ok');
+  }else{
+    document.getElementById('sb2').style.background='var(--g)';
+    document.getElementById('step2').style.display='';
+    toast('Welcome back — pick up where you left off','ok');
+  }
+
+  document.getElementById('apply').scrollIntoView({behavior:'smooth',block:'start'});
+}
+document.addEventListener('DOMContentLoaded',checkResumeOnLoad);
 function toggleMenu(){
   const m=document.getElementById('nlinks');
   const icon=document.getElementById('nburgerIcon');
@@ -364,15 +463,19 @@ function goStep2(){
 
   const leads=getLeads();
   currentLeadId=Date.now();
+  const resumeToken=getOrCreateResumeToken();
   leads.unshift({
     id:currentLeadId,name,phone,
     loanType:aLT,amount:'',emp:'',income:'',city:'',existingLoan:'',
     date:new Date().toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'}),
     dateRaw:new Date().toISOString(),
-    status:'Partial'
+    status:'Partial',
+    resumeToken:resumeToken,
+    lastStep:'step2'
   });
   saveLeads(leads);
   sendToSheet(leads[0]);
+  putResumeTokenInURL(resumeToken);
   fireEvent('lead_step1',{loan_type:aLT});
 
   document.getElementById('sb2').style.background='var(--g)';
@@ -405,7 +508,9 @@ function goStep3(){
     existingLoan:document.getElementById('fexist').value,
     date:new Date().toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'}),
     dateRaw:new Date().toISOString(),
-    status:'Partial'
+    status:'Partial',
+    resumeToken:getOrCreateResumeToken(),
+    lastStep:'step3'
   };
   const idx=leads.findIndex(l=>l.id===currentLeadId);
   if(idx>-1){leads[idx]=lead}else{leads.unshift(lead)}
@@ -465,7 +570,9 @@ async function submitLead(){
     existingLoan:document.getElementById('fexist').value,
     date:new Date().toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'}),
     dateRaw:new Date().toISOString(),
-    status:'New'
+    status:'New',
+    resumeToken:getOrCreateResumeToken(),
+    lastStep:'complete'
   };
   const idx=leads.findIndex(l=>l.id===currentLeadId);
   if(idx>-1){leads[idx]=lead}else{leads.unshift(lead)}
@@ -505,6 +612,7 @@ async function submitLead(){
     document.getElementById('step3form').style.display='none';
     document.getElementById('step3success').style.display='';
     toast('Application submitted!','ok');
+    clearResumeToken();
     setTimeout(()=>{ window.location.href=waURL; },1200);
     return;
   }
@@ -542,6 +650,7 @@ async function submitLead(){
   document.getElementById('step3successMsg').textContent='Your details and documents are saved. Redirecting you to WhatsApp…';
   document.getElementById('step3success').style.display='';
   toast('Application submitted!','ok');
+  clearResumeToken();
 
   window.location.href=waURL;
 }
