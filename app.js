@@ -471,7 +471,9 @@ function goStep2(){
     dateRaw:new Date().toISOString(),
     status:'Partial',
     resumeToken:resumeToken,
-    lastStep:'step2'
+    lastStep:'step2',
+    consentGiven:true,
+    consentTimestamp:new Date().toISOString()
   });
   saveLeads(leads);
   sendToSheet(leads[0]);
@@ -572,7 +574,8 @@ async function submitLead(){
     dateRaw:new Date().toISOString(),
     status:'New',
     resumeToken:getOrCreateResumeToken(),
-    lastStep:'complete'
+    lastStep:'complete',
+    docConsentTimestamp:new Date().toISOString()
   };
   const idx=leads.findIndex(l=>l.id===currentLeadId);
   if(idx>-1){leads[idx]=lead}else{leads.unshift(lead)}
