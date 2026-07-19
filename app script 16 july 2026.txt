@@ -8,7 +8,7 @@
 const API_SECRET = 'CHANGE_THIS_TO_A_RANDOM_STRING_1234';
 
 const FOLDER_NAME = 'StarkLoan - Loan Documents';
-const HEADERS = ['Timestamp','Name','Phone','Loan Type','Amount','Employment','Income','City','Existing Loan','Status','Documents'];
+const HEADERS = ['Timestamp','Name','Phone','Loan Type','Amount','Employment','Income','City','Existing Loan','Status','Documents','Resume Token','Last Step','Invalid Docs','Consent Given At','Doc Consent Given At'];
 const MAX_FILE_BYTES = 5 * 1024 * 1024; // 5MB
 const ALLOWED_FILE_TYPES = ['image/jpeg','image/png','image/webp','application/pdf'];
 
@@ -52,7 +52,19 @@ function doPost(e) {
       const file = folder.createFile(blob);
       file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
 
-      appendDocLink_(data.rowId, clip_(data.label) || 'Document', file.getUrl());
+      const label = clip_(data.label) || 'Document';
+      appendDocLink_(data.rowId, label, file.getUrl());
+
+      // Silent content check — runs in the background, never shown to the
+      // user and never blocks their submission. Only checks image uploads
+      // (PDFs are skipped for now — most bad-file cases are screenshots,
+      // which are always images). A mismatch downgrades the row's Status
+      // to 'Docs Invalid' so the follow-up automation can catch it and
+      // ask specifically for that document to be redone.
+      if (fileType !== 'application/pdf') {
+        checkDocumentValidity_(data.rowId, label, data.fileData, fileType);
+      }
+
       return ContentService.createTextOutput(JSON.stringify({status:'success'}))
         .setMimeType(ContentService.MimeType.JSON);
     }
@@ -60,6 +72,24 @@ function doPost(e) {
     if (data.action === 'sendCAPI') {
       sendMetaCAPI_(data);
       return ContentService.createTextOutput(JSON.stringify({status:'success'}))
+        .setMimeType(ContentService.MimeType.JSON);
+    }
+
+    // Looks up a lead by its resume token (issued client-side the moment
+    // step 1 is saved) so a dropped-off user can pick up exactly where
+    // they left off instead of retyping name/phone/etc. Only returns data
+    // for an exact token match — a guessed or missing token returns nothing.
+    if (data.action === 'getLead') {
+      if (!data.token) {
+        return ContentService.createTextOutput(JSON.stringify({status:'error', message:'Missing token'}))
+          .setMimeType(ContentService.MimeType.JSON);
+      }
+      const found = findRowByToken_(data.token);
+      if (!found) {
+        return ContentService.createTextOutput(JSON.stringify({status:'success', lead:null}))
+          .setMimeType(ContentService.MimeType.JSON);
+      }
+      return ContentService.createTextOutput(JSON.stringify({status:'success', lead:found}))
         .setMimeType(ContentService.MimeType.JSON);
     }
 
@@ -71,6 +101,46 @@ function doPost(e) {
     return ContentService.createTextOutput(JSON.stringify({status:'error', message: err.toString()}))
       .setMimeType(ContentService.MimeType.JSON);
   }
+}
+
+// Keeps Gemini calls safely under the free tier's daily request cap so a
+// burst of uploads never hard-fails or eats into a paid quota unexpectedly.
+// Resets automatically at midnight IST. Uses a lock since multiple file
+// uploads can hit this concurrently.
+function geminiQuotaAllowed_() {
+  const props = PropertiesService.getScriptProperties();
+  const lock = LockService.getScriptLock();
+  lock.waitLock(15000);
+  try {
+    const today = Utilities.formatDate(new Date(), 'Asia/Kolkata', 'yyyy-MM-dd');
+    const storedDate = props.getProperty('GEMINI_QUOTA_DATE');
+    let count = Number(props.getProperty('GEMINI_QUOTA_COUNT') || 0);
+    if (storedDate !== today) {
+      count = 0;
+      props.setProperty('GEMINI_QUOTA_DATE', today);
+    }
+    const DAILY_SAFE_LIMIT = 1400; // stays under Gemini's free-tier 1,500/day cap
+    if (count >= DAILY_SAFE_LIMIT) return false;
+    props.setProperty('GEMINI_QUOTA_COUNT', String(count + 1));
+    return true;
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+// Retries a request with exponential backoff (500ms, 1s, 2s) on rate-limit
+// (429) or transient server (503) responses, so a brief hiccup doesn't
+// silently drop a valid document check.
+function fetchWithRetry_(url, options, maxRetries) {
+  maxRetries = maxRetries || 3;
+  let lastResponse;
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
+    lastResponse = UrlFetchApp.fetch(url, options);
+    const code = lastResponse.getResponseCode();
+    if (code !== 429 && code !== 503) return lastResponse;
+    Utilities.sleep(Math.pow(2, attempt) * 500);
+  }
+  return lastResponse;
 }
 
 // Sends one conversion event to Meta's Conversions API. Runs in its own
@@ -124,7 +194,113 @@ function sendMetaCAPI_(data) {
   }
 }
 
-// Hashes a value with SHA-256 as hex, lowercase — the format Meta's
+// Uses a vision-capable model to check whether an uploaded image actually
+// looks like the document it's labeled as — e.g. catches a UPI payment
+// screenshot uploaded under "Salary Slip". Runs silently: never shown to
+// the user, never blocks their submission. Wrapped in its own try/catch
+// so a model/API hiccup can never break the upload itself, matching the
+// same non-fatal pattern as sendMetaCAPI_ below.
+function checkDocumentValidity_(rowId, label, base64Data, mimeType) {
+  try {
+    const apiKey = PropertiesService.getScriptProperties().getProperty('GEMINI_API_KEY');
+    if (!apiKey) {
+      Logger.log('Doc check skipped — GEMINI_API_KEY not set in Script Properties');
+      return;
+    }
+
+    // Stay safely under Gemini's free-tier daily cap. If we're at the
+    // limit, skip silently rather than error — the doc just doesn't get
+    // checked today, which is a safer failure than blocking the upload.
+    if (!geminiQuotaAllowed_()) {
+      Logger.log('Doc check skipped — daily Gemini quota guard reached');
+      return;
+    }
+
+    const payload = {
+      contents: [{
+        role: 'user',
+        parts: [
+          { text: 'Does this image genuinely look like a "' + label + '"? Reply with ONLY valid JSON, nothing else: {"valid": true or false}. If it looks like a screenshot of a payment app, a chat conversation, an unrelated photo, or a different document type, answer false.' },
+          { inline_data: { mime_type: mimeType, data: base64Data } }
+        ]
+      }],
+      generationConfig: { temperature: 0, maxOutputTokens: 20 }
+    };
+
+    const res = fetchWithRetry_(
+      'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=' + apiKey,
+      {
+        method: 'post',
+        contentType: 'application/json',
+        payload: JSON.stringify(payload),
+        muteHttpExceptions: true
+      }
+    );
+
+    const body = JSON.parse(res.getContentText());
+    const raw = body.candidates && body.candidates[0] && body.candidates[0].content
+      && body.candidates[0].content.parts && body.candidates[0].content.parts[0]
+      && body.candidates[0].content.parts[0].text;
+    if (!raw) return;
+
+    const cleaned = raw.replace(/```json|```/g, '').trim();
+    const parsed = JSON.parse(cleaned);
+
+    if (parsed.valid === false) {
+      flagInvalidDoc_(rowId, label);
+    } else {
+      clearInvalidDoc_(rowId, label);
+    }
+  } catch (err) {
+    Logger.log('Doc validity check error (non-fatal): ' + err.toString());
+  }
+}
+
+// Downgrades a row's Status to 'Docs Invalid' and records which document
+// failed, so the follow-up automation knows to ask specifically for that
+// document — without ever telling the user directly on the page.
+function flagInvalidDoc_(rowId, label) {
+  const lock = LockService.getScriptLock();
+  lock.waitLock(15000);
+  try {
+    const sheet = getSheet_();
+    const statusCell = sheet.getRange(rowId, 10);
+    if (statusCell.getValue() !== 'Docs Invalid') {
+      statusCell.setValue('Docs Invalid');
+    }
+    const invalidCell = sheet.getRange(rowId, 14);
+    const current = invalidCell.getValue();
+    const list = current ? String(current).split(', ') : [];
+    if (list.indexOf(label) === -1) {
+      list.push(label);
+      invalidCell.setValue(list.join(', '));
+    }
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+// Removes a label from the invalid-docs list once a re-upload passes the
+// check, and restores Status to 'New' once no invalid docs remain — this
+// is what lets a lead self-heal after they fix a flagged document,
+// without you ever needing to manually edit the sheet.
+function clearInvalidDoc_(rowId, label) {
+  const lock = LockService.getScriptLock();
+  lock.waitLock(15000);
+  try {
+    const sheet = getSheet_();
+    const invalidCell = sheet.getRange(rowId, 14);
+    const current = invalidCell.getValue();
+    if (!current) return;
+    const list = String(current).split(', ').filter(function(l){return l && l !== label;});
+    invalidCell.setValue(list.join(', '));
+    if (list.length === 0) {
+      sheet.getRange(rowId, 10).setValue('New');
+    }
+  } finally {
+    lock.releaseLock();
+  }
+}
 // Conversions API requires for personal data like phone/name.
 function sha256Hex_(value) {
   const normalized = String(value || '').trim().toLowerCase();
@@ -159,11 +335,25 @@ function upsertLeadRow_(lead) {
     clip_(lead.city),
     clip_(lead.existingLoan),
     clip_(lead.status || 'New'),
-    ''
+    '',
+    clip_(lead.resumeToken),
+    clip_(lead.lastStep)
   ];
 
+  // Prefer matching by resume token — it's unique per attempt, unlike a
+  // phone number which could belong to more than one application over
+  // time. Fall back to the old phone+Partial match only if no token was
+  // sent (keeps this compatible with an older, not-yet-updated frontend).
   let targetRow = -1;
-  if (lead.phone) {
+  if (lead.resumeToken) {
+    const data = sheet.getDataRange().getValues();
+    for (let i = data.length - 1; i >= 1; i--) {
+      if (String(data[i][11]) === String(lead.resumeToken)) {
+        targetRow = i + 1;
+        break;
+      }
+    }
+  } else if (lead.phone) {
     const data = sheet.getDataRange().getValues();
     for (let i = data.length - 1; i >= 1; i--) {
       if (String(data[i][2]) === String(lead.phone) && data[i][9] === 'Partial') {
@@ -181,7 +371,48 @@ function upsertLeadRow_(lead) {
     sheet.appendRow(row);
     targetRow = sheet.getLastRow();
   }
+
+  // Consent timestamps are written to their own columns, separate from
+  // the main row overwrite above, and only ever set ONCE — this
+  // preserves the actual moment consent was first given as a durable
+  // record, even if the lead's row gets updated many times afterward
+  // (e.g. moving from Partial to New, or a re-upload after Docs Invalid).
+  if (lead.consentTimestamp) {
+    const cell = sheet.getRange(targetRow, 15);
+    if (!cell.getValue()) cell.setValue(lead.consentTimestamp);
+  }
+  if (lead.docConsentTimestamp) {
+    const cell2 = sheet.getRange(targetRow, 16);
+    if (!cell2.getValue()) cell2.setValue(lead.docConsentTimestamp);
+  }
+
   return targetRow;
+}
+
+// Finds a lead row by its resume token and returns just the fields the
+// frontend needs to pre-fill the form — never the whole row, and never
+// anything if the token doesn't match exactly.
+function findRowByToken_(token) {
+  const sheet = getSheet_();
+  const data = sheet.getDataRange().getValues();
+  for (let i = data.length - 1; i >= 1; i--) {
+    if (String(data[i][11]) === String(token)) {
+      return {
+        rowId: i + 1,
+        name: data[i][1],
+        phone: data[i][2],
+        loanType: data[i][3],
+        amount: data[i][4],
+        emp: data[i][5],
+        income: data[i][6],
+        city: data[i][7],
+        existingLoan: data[i][8],
+        status: data[i][9],
+        lastStep: data[i][12] || 'step1'
+      };
+    }
+  }
+  return null;
 }
 
 function appendDocLink_(rowId, label, url) {
