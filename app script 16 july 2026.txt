@@ -8,7 +8,7 @@
 const API_SECRET = 'CHANGE_THIS_TO_A_RANDOM_STRING_1234';
 
 const FOLDER_NAME = 'StarkLoan - Loan Documents';
-const HEADERS = ['Timestamp','Name','Phone','Loan Type','Amount','Employment','Income','City','Existing Loan','Status','Documents','Resume Token','Last Step','Invalid Docs','Consent Given At','Doc Consent Given At'];
+const HEADERS = ['Timestamp','Name','Phone','Loan Type','Amount','Employment','Income','City','Existing Loan','Status','Documents','Resume Token','Last Step','Invalid Docs','Consent Given At','Doc Consent Given At','Document Consent Statement'];
 const MAX_FILE_BYTES = 5 * 1024 * 1024; // 5MB
 const ALLOWED_FILE_TYPES = ['image/jpeg','image/png','image/webp','application/pdf'];
 
@@ -90,6 +90,21 @@ function doPost(e) {
           .setMimeType(ContentService.MimeType.JSON);
       }
       return ContentService.createTextOutput(JSON.stringify({status:'success', lead:found}))
+        .setMimeType(ContentService.MimeType.JSON);
+    }
+
+    // Saves a real, timestamped, named consent statement for document
+    // sharing — both as a durable record in the sheet and as its own
+    // text file sitting alongside that lead's actual uploaded documents
+    // in Drive, so the consent record and the documents it covers are
+    // never separated.
+    if (data.action === 'saveConsentRecord') {
+      if (!data.rowId || !data.consentText) {
+        return ContentService.createTextOutput(JSON.stringify({status:'error', message:'Missing rowId or consentText'}))
+          .setMimeType(ContentService.MimeType.JSON);
+      }
+      saveDocConsentRecord_(data.rowId, data.name, data.consentText);
+      return ContentService.createTextOutput(JSON.stringify({status:'success'}))
         .setMimeType(ContentService.MimeType.JSON);
     }
 
@@ -425,6 +440,39 @@ function appendDocLink_(rowId, label, url) {
     range.setValue(current ? current + '\n' + label + ': ' + url : label + ': ' + url);
   } finally {
     lock.releaseLock();
+  }
+}
+
+// Writes a named, timestamped consent statement to its own sheet column
+// AND creates an actual .txt file in the same Drive folder as the
+// lead's uploaded documents — this keeps the consent record physically
+// alongside the documents it covers, not just referenced from a
+// separate system. Only set once per row, same as the other consent
+// timestamp columns, so it always reflects the first time consent was
+// actually given.
+function saveDocConsentRecord_(rowId, name, consentText) {
+  const lock = LockService.getScriptLock();
+  lock.waitLock(15000);
+  try {
+    const sheet = getSheet_();
+    const cell = sheet.getRange(rowId, 17);
+    if (cell.getValue()) return; // already recorded — never overwrite
+    cell.setValue(consentText);
+  } finally {
+    lock.releaseLock();
+  }
+
+  try {
+    const folder = getFolder_();
+    const safeName = clip_(name).replace(/[^a-zA-Z0-9 ]/g, '') || 'Applicant';
+    const blob = Utilities.newBlob(consentText, 'text/plain', 'Consent Statement - ' + safeName + '.txt');
+    const file = folder.createFile(blob);
+    file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+    appendDocLink_(rowId, 'Consent Statement', file.getUrl());
+  } catch (err) {
+    // A Drive hiccup here should never lose the sheet record above —
+    // the sheet cell write already succeeded and is the source of truth.
+    Logger.log('Consent file creation error (non-fatal): ' + err.toString());
   }
 }
 
