@@ -141,6 +141,7 @@ async function checkResumeOnLoad(){
     document.getElementById('step2').style.display='none';
     document.getElementById('step3').style.display='';
     renderDocRequirements();
+    showDocPurposeModal();
     toast(lead.status==='Docs Invalid' ? 'One document needs to be re-uploaded' : 'Welcome back — pick up where you left off','ok');
   }else{
     document.getElementById('sb2').style.background='var(--g)';
@@ -493,6 +494,54 @@ function backToStep1(){
   document.getElementById('step1').scrollIntoView({behavior:'smooth',block:'start'});
 }
 
+// ── DOCUMENT PURPOSE NOTICE ──
+// Shows a plain-language notice of exactly why documents are being
+// collected and who they're shared with, BEFORE the person can upload
+// anything — not just a link buried in the privacy policy. The overlay
+// itself blocks interaction with everything behind it until dismissed.
+// The consent line shows their actual name, not a generic placeholder,
+// and confirming it saves a real signed-style record — both to the
+// sheet and as its own file sitting alongside their uploaded documents.
+function showDocPurposeModal(){
+  const modal=document.getElementById('docPurposeModal');
+  if(!modal)return;
+  const nameSpan=document.getElementById('docConsentNameSpan');
+  if(nameSpan){
+    const name=document.getElementById('fn') ? document.getElementById('fn').value.trim() : '';
+    nameSpan.textContent=name||'Applicant';
+  }
+  modal.style.display='flex';
+}
+function dismissDocPurposeModal(){
+  const modal=document.getElementById('docPurposeModal');
+  if(modal)modal.style.display='none';
+}
+async function recordDocConsent(){
+  const name=(document.getElementById('fn') ? document.getElementById('fn').value.trim() : '')||'Applicant';
+  const phone=document.getElementById('fp') ? document.getElementById('fp').value.trim() : '';
+  const consentTimestamp=new Date().toLocaleString('en-IN',{dateStyle:'medium',timeStyle:'short'});
+  const consentText='I, '+name+' ('+phone+'), consent to share these documents with StarkLoan for the purpose of processing my loan application. Recorded on '+consentTimestamp+'.';
+
+  dismissDocPurposeModal();
+
+  let rowId=currentRowId;
+  if(!rowId && rowIdPromise){
+    try{rowId=await rowIdPromise}catch(e){}
+  }
+  // If the row hasn't been created yet for some reason, don't block the
+  // user over it — this is a non-critical background save, same
+  // philosophy as document uploads and CAPI events elsewhere in this file.
+  if(!rowId)return;
+  if(!GSHEET_URL || GSHEET_URL.indexOf('PASTE_')===0)return;
+
+  fetch(GSHEET_URL,{
+    method:'POST',
+    mode:'no-cors',
+    headers:{'Content-Type':'text/plain'},
+    body:JSON.stringify({action:'saveConsentRecord',rowId:rowId,name:name,phone:phone,consentText:consentText,secret:API_SECRET})
+  }).catch(()=>{});
+}
+
 function goStep3(){
   const amount=document.getElementById('fa').value;
   const emp=document.getElementById('fem').value;
@@ -524,6 +573,7 @@ function goStep3(){
   document.getElementById('step2').style.display='none';
   document.getElementById('step3').style.display='';
   renderDocRequirements();
+  showDocPurposeModal();
   document.getElementById('step3').scrollIntoView({behavior:'smooth',block:'start'});
 }
 
