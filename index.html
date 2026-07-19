@@ -571,6 +571,23 @@ src="https://www.facebook.com/tr?id=2041090346480777&ev=PageView&noscript=1"
 
 <div id="toast"></div>
 
+<div class="modal-overlay" id="docPurposeModal" style="z-index:2000;align-items:center">
+  <div class="modal-box" style="max-width:460px">
+    <h3 style="font-family:var(--font-display);font-size:19px;font-weight:700;margin-bottom:12px">Before you upload your documents</h3>
+    <p style="font-size:14px;color:var(--tx);margin-bottom:10px">We collect these documents for one purpose only: to process your loan application.</p>
+    <div style="background:var(--gl,#f0f9f4);border:1px solid var(--g);border-radius:8px;padding:12px 14px;margin-bottom:14px;font-size:13.5px;color:var(--tx);line-height:1.6">
+      I, <strong id="docConsentNameSpan">Applicant</strong>, consent to share these documents with StarkLoan for the purpose of processing my loan application.
+    </div>
+    <ul style="font-size:13.5px;color:#374151;padding-left:1.2rem;margin-bottom:14px;line-height:1.7">
+      <li>Used to confirm your identity, income, and eligibility</li>
+      <li>Shared only with the specific RBI-regulated bank/NBFC partner assessing your application</li>
+      <li>Never sold or shared with unrelated third parties for marketing or any other purpose</li>
+    </ul>
+    <p style="font-size:12px;color:var(--mu);margin-bottom:16px">Full details in our <a href="privacy-policy.html" target="_blank" rel="noopener" style="color:var(--g);text-decoration:underline">Privacy Policy</a>.</p>
+    <button type="button" class="abtn" style="margin-top:0" onclick="recordDocConsent()">I Agree &amp; Continue</button>
+  </div>
+</div>
+
 <script src="app.js"></script>
 <script src="pixel-tracking.js"></script>
 </body>
