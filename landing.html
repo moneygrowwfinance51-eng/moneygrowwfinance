@@ -50,6 +50,12 @@ nav{background:#fff;padding:14px 20px;display:flex;align-items:center;gap:11px}
 .field.has-err .field-row{border-color:#fca5a5}
 .field.has-err .err-msg{display:block}
 
+.consent-row{display:flex;align-items:flex-start;gap:8px;cursor:pointer;padding:2px 0}
+.consent-row input[type="checkbox"]{margin-top:3px;flex-shrink:0;width:15px;height:15px;accent-color:var(--g)}
+.consent-row span{font-size:12px;color:#4b5563;line-height:1.5}
+.consent-row a{color:var(--g);text-decoration:underline}
+.field.has-err .consent-row span{color:#b91c1c}
+
 .cta{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;background:var(--g);color:#fff;border:none;border-radius:10px;padding:15px;font-size:15px;font-weight:700;font-family:inherit;cursor:pointer;margin-top:6px;transition:.15s}
 .cta:active{transform:scale(.98)}
 .cta:disabled{opacity:.65;cursor:default}
@@ -117,6 +123,14 @@ nav{background:#fff;padding:14px 20px;display:flex;align-items:center;gap:11px}
             <svg class="icon chev"><use href="#icon-chevron-down"/></svg>
           </div>
           <div class="err-msg">Please select a loan amount.</div>
+        </div>
+
+        <div class="field" id="f-consent">
+          <label class="consent-row">
+            <input type="checkbox" id="inConsent">
+            <span>I agree to the <a href="privacy-policy.html" target="_blank" rel="noopener">Privacy Policy</a> and authorize StarkLoan to contact me regarding finance options.</span>
+          </label>
+          <div class="err-msg">Please agree to the Privacy Policy to continue.</div>
         </div>
 
         <button type="submit" class="cta" id="ctaBtn">
@@ -201,11 +215,13 @@ function validate(){
   const name = document.getElementById('inName').value.trim();
   const phone = document.getElementById('inPhone').value.trim();
   const amount = document.getElementById('inAmount').value;
+  const consent = document.getElementById('inConsent').checked;
 
   let ok = true;
   if(!name){ setError('f-name', true); ok = false; } else setError('f-name', false);
   if(!/^\d{10}$/.test(phone)){ setError('f-phone', true); ok = false; } else setError('f-phone', false);
   if(!amount){ setError('f-amount', true); ok = false; } else setError('f-amount', false);
+  if(!consent){ setError('f-consent', true); ok = false; } else setError('f-consent', false);
   return ok;
 }
 
@@ -233,7 +249,8 @@ document.getElementById('leadForm').addEventListener('submit', function(e){
     income: '',
     city: '',
     existingLoan: '',
-    status: 'Ad Lead'
+    status: 'Ad Lead',
+    consentTimestamp: new Date().toISOString()
   };
 
   // Send lead to the same Apps Script backend used by the main site
