@@ -13,6 +13,12 @@ const GSHEET_URL = 'https://script.google.com/macros/s/AKfycbw2wtzpfWgahjn_n-2XP
 // source, so it is not a substitute for real authentication.
 const API_SECRET = 'CHANGE_THIS_TO_A_RANDOM_STRING_1234';
 
+// Single source of truth for the Grievance Officer contact — used in the
+// document-consent popup below. Update this ONE line rather than editing
+// email addresses in multiple places, which is how display text and
+// mailto links end up mismatched.
+const GRIEVANCE_EMAIL = 'PASTE_YOUR_REAL_GRIEVANCE_EMAIL_HERE';
+
 function sendToSheet(lead){
   if(!GSHEET_URL || GSHEET_URL.indexOf('PASTE_')===0) return Promise.resolve();
   return fetch(GSHEET_URL,{
@@ -494,22 +500,108 @@ function backToStep1(){
   document.getElementById('step1').scrollIntoView({behavior:'smooth',block:'start'});
 }
 
-// ── DOCUMENT PURPOSE NOTICE ──
-// Shows a plain-language notice of exactly why documents are being
-// collected and who they're shared with, BEFORE the person can upload
-// anything — not just a link buried in the privacy policy. The overlay
-// itself blocks interaction with everything behind it until dismissed.
-// The consent line shows their actual name, not a generic placeholder,
-// and confirming it saves a real signed-style record — both to the
-// sheet and as its own file sitting alongside their uploaded documents.
+// ── DOCUMENT PURPOSE NOTICE (bilingual, dynamic) ──
+// Shows a plain-language notice of exactly which documents are being
+// collected, why, and who they're shared with — BEFORE the person can
+// upload anything. Content is rendered fresh each time so it always
+// reflects their actual name and their actual required document list
+// (Salaried vs Business), in whichever language they pick.
+//
+// Only English and Hindi are offered on purpose. Machine-translating a
+// consent/rights document into languages nobody here can verify risks
+// subtly misstating what someone is agreeing to — which undermines the
+// consent rather than strengthening it. Hindi covers the large majority
+// of the actual customer base; add further languages only with a proper
+// human translation review, not by auto-generating more entries below.
+const DOC_CONSENT_I18N={
+  en:{
+    title:'Before you upload your documents',
+    intro:'We collect these documents for one purpose only: to process your loan application.',
+    consentPrefix:'I consent to share my',
+    consentSuffix:'with StarkLoan for the purpose of processing my loan application.',
+    purposeLabel:'Purpose:',
+    purposeText:'Used to confirm your identity, income, and eligibility.',
+    sharingLabel:'Sharing:',
+    sharingText:'Shared only with the specific RBI-regulated bank/NBFC partner assessing your application.',
+    rightsLabel:'Your Rights:',
+    rightsText:'You have the right to review, correct, or withdraw your consent at any time by contacting us.',
+    grievanceLabel:'Grievance Redressal:',
+    grievanceText:'For any queries or to exercise your rights, contact our Grievance Officer at',
+    fullDetails:'Full details are available in our',
+    privacyPolicy:'Privacy Policy',
+    button:'I Agree & Continue',
+    nameFallback:'Applicant',
+    docJoiner:'and'
+  },
+  hi:{
+    title:'दस्तावेज़ अपलोड करने से पहले',
+    intro:'हम ये दस्तावेज़ केवल एक उद्देश्य के लिए एकत्र करते हैं: आपके लोन आवेदन को प्रोसेस करने के लिए।',
+    consentPrefix:'मैं अपना',
+    consentSuffix:'लोन आवेदन प्रोसेस करने के उद्देश्य से StarkLoan के साथ साझा करने की सहमति देता/देती हूँ।',
+    purposeLabel:'उद्देश्य:',
+    purposeText:'आपकी पहचान, आय और पात्रता की पुष्टि के लिए उपयोग किया जाता है।',
+    sharingLabel:'साझाकरण:',
+    sharingText:'केवल उस विशिष्ट RBI-विनियमित बैंक/NBFC पार्टनर के साथ साझा किया जाता है जो आपके आवेदन का मूल्यांकन कर रहा है।',
+    rightsLabel:'आपके अधिकार:',
+    rightsText:'आपको किसी भी समय हमसे संपर्क करके अपनी सहमति की समीक्षा करने, सुधारने या वापस लेने का अधिकार है।',
+    grievanceLabel:'शिकायत निवारण:',
+    grievanceText:'किसी भी प्रश्न या अपने अधिकारों का प्रयोग करने के लिए, हमारे शिकायत अधिकारी से संपर्क करें:',
+    fullDetails:'पूरी जानकारी हमारी',
+    privacyPolicy:'गोपनीयता नीति',
+    button:'मैं सहमत हूँ और जारी रखें',
+    nameFallback:'आवेदक',
+    docJoiner:'और'
+  }
+};
+let docConsentLang=localStorage.getItem('mg_doc_consent_lang')||'en';
+
+function formatDocList(items,joiner){
+  const labels=items.map(it=>it.label);
+  if(labels.length===0)return '';
+  if(labels.length===1)return labels[0];
+  return labels.slice(0,-1).join(', ')+' '+joiner+' '+labels[labels.length-1];
+}
+
+function renderDocPurposeModal(){
+  const t=DOC_CONSENT_I18N[docConsentLang]||DOC_CONSENT_I18N.en;
+  const name=(document.getElementById('fn')?document.getElementById('fn').value.trim():'')||t.nameFallback;
+  const items=DOC_REQUIREMENTS[empCategory()]||DOC_REQUIREMENTS['Salaried'];
+  const docList=formatDocList(items,t.docJoiner);
+  const grievanceEmail=GRIEVANCE_EMAIL;
+
+  const html=`
+    <div style="display:flex;justify-content:flex-end;gap:6px;margin-bottom:10px">
+      <button type="button" onclick="setDocConsentLang('en')" style="font-size:12px;font-weight:${docConsentLang==='en'?'700':'500'};padding:4px 10px;border-radius:6px;border:1px solid var(--bdr);background:${docConsentLang==='en'?'var(--g)':'#fff'};color:${docConsentLang==='en'?'#fff':'var(--tx)'};cursor:pointer;font-family:inherit">English</button>
+      <button type="button" onclick="setDocConsentLang('hi')" style="font-size:12px;font-weight:${docConsentLang==='hi'?'700':'500'};padding:4px 10px;border-radius:6px;border:1px solid var(--bdr);background:${docConsentLang==='hi'?'var(--g)':'#fff'};color:${docConsentLang==='hi'?'#fff':'var(--tx)'};cursor:pointer;font-family:inherit">हिंदी</button>
+    </div>
+    <h3 style="font-family:var(--font-display);font-size:19px;font-weight:700;margin-bottom:12px">${t.title}</h3>
+    <p style="font-size:14px;color:var(--tx);margin-bottom:10px">${t.intro}</p>
+    <div style="background:#f0f9f4;border:1px solid var(--g);border-radius:8px;padding:12px 14px;margin-bottom:14px;font-size:13.5px;color:var(--tx);line-height:1.6">
+      ${t.consentPrefix} <strong>${name}</strong> — ${docList} — ${t.consentSuffix}
+    </div>
+    <ul style="font-size:13.5px;color:#374151;padding-left:1.2rem;margin-bottom:14px;line-height:1.8;list-style:none">
+      <li><strong>${t.purposeLabel}</strong> ${t.purposeText}</li>
+      <li><strong>${t.sharingLabel}</strong> ${t.sharingText}</li>
+      <li><strong>${t.rightsLabel}</strong> ${t.rightsText}</li>
+      <li><strong>${t.grievanceLabel}</strong> ${t.grievanceText} <a href="mailto:${grievanceEmail}" style="color:var(--g);text-decoration:underline">${grievanceEmail}</a></li>
+    </ul>
+    <p style="font-size:12px;color:var(--mu);margin-bottom:16px">${t.fullDetails} <a href="privacy-policy.html" target="_blank" rel="noopener" style="color:var(--g);text-decoration:underline">${t.privacyPolicy}</a>.</p>
+    <button type="button" class="abtn" style="margin-top:0" onclick="recordDocConsent()">${t.button}</button>
+  `;
+  const container=document.getElementById('docPurposeModalContent');
+  if(container)container.innerHTML=html;
+}
+
+function setDocConsentLang(lang){
+  docConsentLang=lang;
+  localStorage.setItem('mg_doc_consent_lang',lang);
+  renderDocPurposeModal();
+}
+
 function showDocPurposeModal(){
   const modal=document.getElementById('docPurposeModal');
   if(!modal)return;
-  const nameSpan=document.getElementById('docConsentNameSpan');
-  if(nameSpan){
-    const name=document.getElementById('fn') ? document.getElementById('fn').value.trim() : '';
-    nameSpan.textContent=name||'Applicant';
-  }
+  renderDocPurposeModal();
   modal.style.display='flex';
 }
 function dismissDocPurposeModal(){
@@ -517,10 +609,13 @@ function dismissDocPurposeModal(){
   if(modal)modal.style.display='none';
 }
 async function recordDocConsent(){
-  const name=(document.getElementById('fn') ? document.getElementById('fn').value.trim() : '')||'Applicant';
+  const t=DOC_CONSENT_I18N[docConsentLang]||DOC_CONSENT_I18N.en;
+  const name=(document.getElementById('fn') ? document.getElementById('fn').value.trim() : '')||t.nameFallback;
   const phone=document.getElementById('fp') ? document.getElementById('fp').value.trim() : '';
+  const items=DOC_REQUIREMENTS[empCategory()]||DOC_REQUIREMENTS['Salaried'];
+  const docList=formatDocList(items,t.docJoiner);
   const consentTimestamp=new Date().toLocaleString('en-IN',{dateStyle:'medium',timeStyle:'short'});
-  const consentText='I, '+name+' ('+phone+'), consent to share these documents with StarkLoan for the purpose of processing my loan application. Recorded on '+consentTimestamp+'.';
+  const consentText='I, '+name+' ('+phone+'), consent to share my '+docList+' with StarkLoan for the purpose of processing my loan application. Recorded on '+consentTimestamp+' [language: '+docConsentLang+'].';
 
   dismissDocPurposeModal();
 
