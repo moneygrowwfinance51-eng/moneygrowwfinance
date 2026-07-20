@@ -17,7 +17,7 @@ const API_SECRET = 'CHANGE_THIS_TO_A_RANDOM_STRING_1234';
 // document-consent popup below. Update this ONE line rather than editing
 // email addresses in multiple places, which is how display text and
 // mailto links end up mismatched.
-const GRIEVANCE_EMAIL = 'PASTE_YOUR_REAL_GRIEVANCE_EMAIL_HERE';
+const GRIEVANCE_EMAIL = 'mali.kamlesh85@gmail.com';
 
 function sendToSheet(lead){
   if(!GSHEET_URL || GSHEET_URL.indexOf('PASTE_')===0) return Promise.resolve();
