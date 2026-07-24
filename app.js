@@ -7,7 +7,7 @@
 // ===================================================================
 
 const STORE = 'mg_leads_v1';
-const GSHEET_URL = 'https://script.google.com/macros/s/AKfycbw2wtzpfWgahjn_n-2XP8J_sMqlZD3jx5fIxHEpvR81EZhxzBkFk1lHNU3-JR3dtfflCw/exec';
+const GSHEET_URL = 'https://script.google.com/macros/s/AKfycbwM8vjN0-2mBNO48GigNfz1QP3yw3JYNUoCNvjdljzPcs9fbHRqS1mSLoi0CWA_U57llA/exec';
 // Must match API_SECRET in your Apps Script exactly. This only filters out
 // random bots/scanners — it is visible to anyone who views this page's
 // source, so it is not a substitute for real authentication.
